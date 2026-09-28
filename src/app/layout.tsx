@@ -13,19 +13,19 @@ export const metadata: Metadata = {
     "format-detection": "telephone=no, date=no, email=no, address=no",
   },
   metadataBase: new URL("https://3todos.vercel.app"),
-  title: "3todos",
-  description: "three things.",
+  title: "極大粒シャインマスカット",
+  description: "today's todos",
   openGraph: {
-    title: "3todos",
-    description: "three things.",
+    title: "極大粒シャインマスカット",
+    description: "today's todos",
     url: "https://3todos.vercel.app",
-    images: [{ url: "/og2.jpg" }],
+    images: [{ url: "/og.jpg" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "3todos",
-    description: "three things.",
-    images: ["/og2.jpg"],
+    title: "極大粒シャインマスカット",
+    description: "today's todos",
+    images: ["/og.jpg"],
   },
 };
 

@@ -150,7 +150,7 @@ export default function Home() {
     const blob = await res.blob();
     const file = new File([blob], "grapes.png", { type: "image/png" });
     if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: "3todos", text: `score ${score}. i did it.`, url: "https://3todos.vercel.app" });
+      await navigator.share({ files: [file], title: "極大粒シャインマスカット", text: `score ${score}. i did it.`, url: "https://3todos.vercel.app" });
     } else {
       const a = document.createElement("a");
       a.href = dataUrl;
@@ -160,13 +160,12 @@ export default function Home() {
   };
 
   return (
-    <main ref={mainRef} className="relative min-h-svh bg-white overflow-hidden">
+    <main ref={mainRef} className="relative min-h-svh bg-[#ededed] overflow-hidden">
       <div className="relative z-10 p-4 sm:p-8 max-w-sm">
         <p className="text-xs sm:text-sm text-zinc-900 mb-1" suppressHydrationWarning>
           {new Date().toISOString().slice(0, 10)}{time ? ` ${time}` : ""}
         </p>
-        <h1 className="text-xs sm:text-sm text-zinc-900 mb-1">today&apos;s todos</h1>
-        <p className="text-xs sm:text-sm text-zinc-900 mb-4 sm:mb-6">finish two. merge them.</p>
+        <h1 className="text-xs sm:text-sm text-zinc-900 mb-4 sm:mb-6">today&apos;s todos</h1>
 
         <div className="flex gap-2 items-end">
           <input
@@ -186,25 +185,26 @@ export default function Home() {
           </button>
         </div>
 
-        {(grapes.length > 0 || score > 0) && (
-          <div className="mt-3 sm:mt-4 text-xs text-zinc-900 space-y-1">
-            <p>
-              score {score} · {activeCount} to go
-            </p>
-            <p className="flex gap-3">
-              {canMerge && <span className="opacity-50">drag a grape onto its twin.</span>}
-              {score > 0 && (
-                <button onClick={handleShare} className="border-b border-zinc-900 hover:opacity-50 transition">
-                  share
-                </button>
-              )}
-              <button onClick={reset} className="border-b border-zinc-900 hover:opacity-50 transition">
-                reset
-              </button>
-            </p>
-          </div>
+        {canMerge && (
+          <p className="mt-3 sm:mt-4 text-xs text-zinc-900 opacity-50">drag a grape onto its twin.</p>
         )}
       </div>
+
+      {(grapes.length > 0 || score > 0) && (
+        <div className="absolute top-0 right-0 z-10 p-4 sm:p-8 text-right text-xs sm:text-sm text-zinc-900 space-y-1">
+          <p>score {score} ({activeCount} to go)</p>
+          <p className="flex gap-3 justify-end">
+            {score > 0 && (
+              <button onClick={handleShare} className="border-b border-zinc-900 hover:opacity-50 transition">
+                share
+              </button>
+            )}
+            <button onClick={reset} className="border-b border-zinc-900 hover:opacity-50 transition">
+              reset
+            </button>
+          </p>
+        </div>
+      )}
 
       {mounted && (
         <Grapes grapes={grapes} onComplete={completeGrape} onMove={moveGrape} onMerge={mergeGrapes} pops={pops} />

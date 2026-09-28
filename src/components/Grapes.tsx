@@ -1,21 +1,27 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import type { Grape, ScorePop } from "@/app/page";
 
 export const HEADER_H = 200;
 const PAD = 16;
+// Room under the lowest grape for its count label.
+const LABEL_H = 24;
 
-// Shine Muscat greens, ripening deeper as grapes grow. Level 1 is a single completed task.
-const LEVEL_COLORS = ["#f2ff8a", "#e6ff4d", "#d4ff1f", "#c2f500", "#a8e000", "#8cc800", "#6fa800", "#548600"];
+// Shine Muscat green (#c0ed00) for every completed grape; size alone shows the level.
+// Grapes use mix-blend-mode: multiply over the #ededed background, so this is
+// #c0ed00 divided by #ededed — it renders as exactly #c0ed00 on the page.
+const GRAPE_COLOR = "#cfff00";
 
-// Light greens need dark text; deeper ones switch to white.
-function levelText(level: number) {
-  return level >= 7 ? "text-white" : "text-lime-950";
-}
+// Merged grapes (level 2+) render as a photo; its white backdrop vanishes under multiply.
+const GRAPE_IMAGE = "/샤인머스켓.png";
 
-export function levelColor(level: number) {
-  return LEVEL_COLORS[Math.min(level - 1, LEVEL_COLORS.length - 1)];
+// Stable per-grape tilt so the photos don't all face the same way.
+function tilt(id: string) {
+  let h = 0;
+  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) | 0;
+  return (Math.abs(h) % 60) - 30;
 }
 
 export function grapeSize(level: number, vw: number, vh: number) {
@@ -29,7 +35,7 @@ function center(g: Pick<Grape, "x" | "y">, size: number, vw: number, vh: number)
   const r = size / 2;
   return {
     x: Math.min(Math.max(g.x * vw, PAD + r), vw - PAD - r),
-    y: Math.min(Math.max(g.y * vh, HEADER_H + r), vh - PAD - r),
+    y: Math.min(Math.max(g.y * vh, HEADER_H + r), vh - PAD - LABEL_H - r),
   };
 }
 
@@ -169,6 +175,7 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Pr
         const c = isDragging ? { x: drag.x, y: drag.y } : center(g, size, vw, vh);
         const isTarget = target === g.id;
         const label = g.tasks.length > 1 ? String(g.tasks.length) : g.tasks[0];
+        const isPhoto = g.done && g.level >= 2;
 
         return (
           <div
@@ -200,22 +207,37 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Pr
                 onPointerUp={(e) => handlePointerUp(e, g)}
                 onPointerCancel={handlePointerCancel}
                 title={g.tasks.join("\n")}
-                className={`w-full h-full rounded-full flex items-center justify-center text-center p-3 select-none transition-colors ${
+                className={`relative w-full h-full rounded-full flex items-center justify-center text-center p-3 select-none transition-colors ${
                   g.done ? "cursor-grab active:cursor-grabbing" : "bg-zinc-100 hover:bg-zinc-200"
                 }`}
                 style={{
                   touchAction: "none",
-                  backgroundColor: g.done ? levelColor(g.level) : undefined,
+                  backgroundColor: g.done && !isPhoto ? GRAPE_COLOR : undefined,
                   transform: isTarget ? "scale(1.12)" : isDragging ? "scale(1.05)" : "scale(1)",
                   transition: "transform 0.2s ease, background-color 0.3s ease",
                   animation: "grapeIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)",
                 }}
               >
+                {isPhoto && (
+                  <Image
+                    src={GRAPE_IMAGE}
+                    alt=""
+                    fill
+                    sizes="(max-width: 768px) 60vw, 40vw"
+                    draggable={false}
+                    className="pointer-events-none object-contain scale-150"
+                    style={{ rotate: `${tilt(g.id)}deg` }}
+                  />
+                )}
                 <span
-                  className={`leading-snug pointer-events-none ${g.done ? levelText(g.level) : "text-zinc-900"} ${
-                    g.tasks.length > 1 ? "text-sm sm:text-base" : "text-[10px] sm:text-xs"
+                  className={`leading-snug pointer-events-none ${
+                    isPhoto
+                      ? "absolute left-1/2 top-full -translate-x-1/2 mt-1 px-1 text-xs sm:text-sm text-lime-950"
+                      : `relative text-[10px] sm:text-xs ${g.done ? "text-lime-950" : "text-zinc-900"}`
                   }`}
                   style={{
+                    // Key-colour highlight behind the count (compensated for multiply, like the grapes).
+                    backgroundColor: isPhoto ? GRAPE_COLOR : undefined,
                     wordBreak: "break-word",
                     display: "-webkit-box",
                     WebkitLineClamp: 4,

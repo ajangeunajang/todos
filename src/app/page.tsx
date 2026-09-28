@@ -26,6 +26,11 @@ const SCORE_KEY = "grapes-score";
 
 const newId = () => Math.random().toString(36).slice(2, 10);
 
+// A fresh board starts with one merged Shine Muscat (2) so the photo grape is visible right away.
+const defaultGrapes = (): Grape[] => [
+  { id: newId(), level: 2, done: true, tasks: ["open merge-todos", "meet the grapes"], x: 0.5, y: 0.6 },
+];
+
 function spawnPosition(existing: Grape[]) {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
@@ -65,7 +70,7 @@ export default function Home() {
       const saved = localStorage.getItem(STORAGE_KEY);
       // Restore after mount so server and client render the same first frame.
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (saved) setGrapes(JSON.parse(saved));
+      setGrapes(saved ? JSON.parse(saved) : defaultGrapes());
       setScore(Number(localStorage.getItem(SCORE_KEY)) || 0);
     } catch {}
     setMounted(true);
@@ -133,7 +138,7 @@ export default function Home() {
 
   const reset = () => {
     if ((grapes.length || score) && confirm("clear all grapes and score?")) {
-      setGrapes([]);
+      setGrapes(defaultGrapes());
       setScore(0);
     }
   };
@@ -211,7 +216,7 @@ export default function Home() {
       )}
 
       <footer className="absolute bottom-0 left-0 w-full p-4 sm:p-8 z-0 space-y-1 sm:space-y-1.5 pointer-events-none">
-        <p className="text-xs sm:text-sm text-zinc-900">© 2026. 3todos. All rights reserved.</p>
+        <p className="text-xs sm:text-sm text-zinc-900">© 2026. merge-todos. All rights reserved.</p>
         <p className="text-xs sm:text-sm text-zinc-900">Inquiries <span style={{ fontFamily: "sans-serif" }}>☞</span> ajangeunajang@gmail.com</p>
         <p className="text-xs sm:text-sm text-zinc-900">
           Design and Developed by{" "}

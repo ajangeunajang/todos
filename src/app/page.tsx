@@ -28,7 +28,7 @@ const newId = () => Math.random().toString(36).slice(2, 10);
 
 // A fresh board starts with one merged Shine Muscat (2) so the photo grape is visible right away.
 const defaultGrapes = (): Grape[] => [
-  { id: newId(), level: 2, done: true, tasks: ["open merge-todos", "meet the grapes"], x: 0.5, y: 0.6 },
+  { id: newId(), level: 2, done: true, tasks: ["open merge-todos", "well begun is half done"], x: 0.5, y: 0.6 },
 ];
 
 function spawnPosition(existing: Grape[]) {

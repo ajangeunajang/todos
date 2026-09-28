@@ -12,13 +12,13 @@ export const metadata: Metadata = {
   other: {
     "format-detection": "telephone=no, date=no, email=no, address=no",
   },
-  metadataBase: new URL("https://3todos.vercel.app"),
+  metadataBase: new URL("https://merge-todos.vercel.app"),
   title: "極大粒シャインマスカット",
   description: "today's todos",
   openGraph: {
     title: "極大粒シャインマスカット",
     description: "today's todos",
-    url: "https://3todos.vercel.app",
+    url: "https://merge-todos.vercel.app",
     images: [{ url: "/og.jpg" }],
   },
   twitter: {

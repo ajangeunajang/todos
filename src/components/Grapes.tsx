@@ -8,6 +8,8 @@ export const HEADER_H = 200;
 const PAD = 16;
 // Room under the lowest grape for its count label.
 const LABEL_H = 24;
+const PEEK_MS = 3000;
+const PEEK_MAX = 8;
 
 // Shine Muscat green (#c0ed00) for every completed grape; size alone shows the level.
 // Grapes use mix-blend-mode: multiply over the #ededed background, so this is
@@ -63,6 +65,21 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Pr
   const [target, setTarget] = useState<string | null>(null);
   const dragRef = useRef<DragInfo | null>(null);
   const magnetRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  // Merged grape whose finished todos are briefly shown under its count.
+  const [peek, setPeek] = useState<string | null>(null);
+  const peekTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => () => clearTimeout(peekTimer.current), []);
+
+  const togglePeek = (id: string) => {
+    clearTimeout(peekTimer.current);
+    if (peek === id) {
+      setPeek(null);
+      return;
+    }
+    setPeek(id);
+    peekTimer.current = setTimeout(() => setPeek(null), PEEK_MS);
+  };
 
   useEffect(() => {
     const onResize = () => setView({ vw: window.innerWidth, vh: window.innerHeight });
@@ -120,7 +137,9 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Pr
 
   const handlePointerDown = (e: React.PointerEvent, g: Grape) => {
     if (dragRef.current) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
     const c = center(g, grapeSize(g.level, vw, vh), vw, vh);
     dragRef.current = {
       id: g.id,
@@ -150,6 +169,7 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Pr
     dragRef.current = null;
     if (!d.moved) {
       if (!g.done) onComplete(g.id);
+      else if (g.level >= 2) togglePeek(g.id);
     } else {
       const x = e.clientX - d.offX;
       const y = e.clientY - d.offY;
@@ -174,8 +194,11 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Pr
         const isDragging = drag?.id === g.id;
         const c = isDragging ? { x: drag.x, y: drag.y } : center(g, size, vw, vh);
         const isTarget = target === g.id;
-        const label = g.tasks.length > 1 ? String(g.tasks.length) : g.tasks[0];
         const isPhoto = g.done && g.level >= 2;
+        const isPeeking = isPhoto && peek === g.id;
+        // Flip the list above the grape when it would run off the bottom of the screen.
+        const peekLines = Math.min(g.tasks.length, PEEK_MAX + 1);
+        const peekAbove = c.y + size / 2 + LABEL_H + peekLines * 18 > vh - PAD;
 
         return (
           <div
@@ -186,7 +209,7 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Pr
               top: c.y - size / 2,
               width: size,
               height: size,
-              zIndex: isDragging ? 15 : g.done ? 2 : 1,
+              zIndex: isDragging ? 15 : isPeeking ? 14 : g.done ? 2 : 1,
               mixBlendMode: "multiply",
               transition: isDragging
                 ? "none"
@@ -229,24 +252,45 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Pr
                     style={{ rotate: `${tilt(g.id)}deg` }}
                   />
                 )}
-                <span
-                  className={`leading-snug pointer-events-none ${
-                    isPhoto
-                      ? "absolute left-1/2 top-full -translate-x-1/2 mt-1 px-1 text-xs sm:text-sm text-lime-950"
-                      : `relative text-[10px] sm:text-xs ${g.done ? "text-lime-950" : "text-zinc-900"}`
-                  }`}
-                  style={{
-                    // Key-colour highlight behind the count (compensated for multiply, like the grapes).
-                    backgroundColor: isPhoto ? GRAPE_COLOR : undefined,
-                    wordBreak: "break-word",
-                    display: "-webkit-box",
-                    WebkitLineClamp: 4,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
-                  }}
-                >
-                  {label}
-                </span>
+                {isPhoto ? (
+                  <div className="absolute left-1/2 top-full -translate-x-1/2 mt-1 flex flex-col items-center pointer-events-none">
+                    {isPeeking && (
+                      <ul
+                        className={`leading-snug text-[10px] sm:text-xs text-zinc-900 whitespace-nowrap text-center ${
+                          peekAbove ? "absolute bottom-full" : "order-last mt-1"
+                        }`}
+                        style={{ marginBottom: peekAbove ? size + 8 : undefined, animation: "peekIn 0.25s ease-out" }}
+                      >
+                        {g.tasks.slice(0, PEEK_MAX).map((t, i) => (
+                          <li key={i}>{t}</li>
+                        ))}
+                        {g.tasks.length > PEEK_MAX && <li className="opacity-50">+{g.tasks.length - PEEK_MAX} more</li>}
+                      </ul>
+                    )}
+                    <span
+                      className="px-1 leading-snug text-xs sm:text-sm text-lime-950"
+                      // Key-colour highlight behind the count (compensated for multiply, like the grapes).
+                      style={{ backgroundColor: GRAPE_COLOR }}
+                    >
+                      {g.tasks.length}
+                    </span>
+                  </div>
+                ) : (
+                  <span
+                    className={`relative leading-snug pointer-events-none text-[10px] sm:text-xs ${
+                      g.done ? "text-lime-950" : "text-zinc-900"
+                    }`}
+                    style={{
+                      wordBreak: "break-word",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 4,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {g.tasks[0]}
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -269,6 +313,10 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Pr
         );
       })}
       <style>{`
+        @keyframes peekIn {
+          from { transform: translateY(-4px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
         @keyframes scorePop {
           from { transform: translate(-50%, 0); opacity: 1; }
           to { transform: translate(-50%, -32px); opacity: 0; }

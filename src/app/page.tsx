@@ -31,6 +31,17 @@ const defaultGrapes = (): Grape[] => [
   { id: newId(), level: 2, done: true, tasks: ["open merge-todos", "well begun is half done"], x: 0.5, y: 0.6 },
 ];
 
+// Points a grape holding n tasks (a power of two, n = 2^k) is worth once earned:
+// n for completing its tasks plus n for each of the k merges that built it.
+const grapeValue = (n: number) => n + Math.log2(n) * n;
+
+// Best final board for n tasks is its binary decomposition, since only equal sizes merge.
+function fullBoardValue(n: number) {
+  let total = 0;
+  for (let size = 1; size <= n; size *= 2) if (n & size) total += grapeValue(size);
+  return total;
+}
+
 function spawnPosition(existing: Grape[]) {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
@@ -146,18 +157,24 @@ export default function Home() {
   };
 
   const activeCount = grapes.filter((g) => !g.done).length;
+  // Max possible score: what's earned so far plus what finishing and fully merging the board would add.
+  const taskCount = grapes.reduce((n, g) => n + g.tasks.length, 0);
+  const boardValue = grapes.reduce((v, g) => v + (g.done ? grapeValue(g.tasks.length) : 0), 0);
+  const maxScore = score + fullBoardValue(taskCount) - boardValue;
   const levels = grapes.filter((g) => g.done).map((g) => g.level);
   const canMerge = levels.some((l, i) => levels.indexOf(l) !== i);
 
   const handleShare = async () => {
     if (!mainRef.current) return;
     const { toPng } = await import("html-to-image");
+    // Safari often paints embedded images only from the second capture on, so warm up first.
+    await toPng(mainRef.current, { pixelRatio: 1 });
     const dataUrl = await toPng(mainRef.current, { pixelRatio: 2 });
     const res = await fetch(dataUrl);
     const blob = await res.blob();
     const file = new File([blob], "grapes.png", { type: "image/png" });
     if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: "極大粒シャインマスカット샤인머스켓", text: `score ${score}. i did it.`, url: "https://merge-todos.vercel.app" });
+      await navigator.share({ files: [file], title: "極大粒シャインマスカット샤인머스켓", text: `${score}/${maxScore}. i did it.`, url: "https://merge-todos.vercel.app" });
     } else {
       const a = document.createElement("a");
       a.href = dataUrl;

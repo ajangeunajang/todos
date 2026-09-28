@@ -24,6 +24,12 @@ export interface ScorePop {
 const STORAGE_KEY = "grapes";
 const SCORE_KEY = "grapes-score";
 
+// Seoul date and time, e.g. "2026-09-29 14:03:27".
+function formatNow(d: Date) {
+  const opts = { timeZone: "Asia/Seoul" } as const;
+  return `${d.toLocaleDateString("en-CA", opts)} ${d.toLocaleTimeString("en-GB", { ...opts, hour12: false })}`;
+}
+
 const newId = () => Math.random().toString(36).slice(2, 10);
 
 // A fresh board starts with one merged Shine Muscat (2) so the photo grape is visible right away.
@@ -90,7 +96,7 @@ export default function Home() {
     } catch {}
     setMounted(true);
     const tick = () =>
-      setTime(new Date().toLocaleTimeString("en-GB", { timeZone: "Asia/Seoul", hour12: false }));
+      setTime(formatNow(new Date()));
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
@@ -245,8 +251,9 @@ export default function Home() {
   return (
     <main ref={mainRef} className="relative min-h-svh bg-[#ededed] overflow-hidden">
       <div className="relative z-10 p-4 sm:p-8 max-w-sm">
-        <p className="text-xs sm:text-sm text-zinc-900 mb-1" suppressHydrationWarning>
-          {new Date().toISOString().slice(0, 10)}{time ? ` ${time}` : ""}
+        {/* Filled in after mount: the page is prerendered, so a date rendered on the server would be the build date. */}
+        <p className="text-xs sm:text-sm text-zinc-900 mb-1 min-h-[1lh]">
+          {time}
         </p>
         <h1 className="text-xs sm:text-sm text-zinc-900 mb-4 sm:mb-6">today&apos;s todos</h1>
 

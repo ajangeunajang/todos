@@ -13,7 +13,16 @@ export interface Grape {
   y: number;
 }
 
+export interface ScorePop {
+  id: string;
+  value: number;
+  level: number;
+  x: number;
+  y: number;
+}
+
 const STORAGE_KEY = "grapes";
+const SCORE_KEY = "grapes-score";
 
 const newId = () => Math.random().toString(36).slice(2, 10);
 
@@ -44,6 +53,8 @@ function spawnPosition(existing: Grape[]) {
 
 export default function Home() {
   const [grapes, setGrapes] = useState<Grape[]>([]);
+  const [score, setScore] = useState(0);
+  const [pops, setPops] = useState<ScorePop[]>([]);
   const [input, setInput] = useState("");
   const [mounted, setMounted] = useState(false);
   const [time, setTime] = useState("");
@@ -55,6 +66,7 @@ export default function Home() {
       // Restore after mount so server and client render the same first frame.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       if (saved) setGrapes(JSON.parse(saved));
+      setScore(Number(localStorage.getItem(SCORE_KEY)) || 0);
     } catch {}
     setMounted(true);
     const tick = () =>
@@ -68,8 +80,17 @@ export default function Home() {
     if (!mounted) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(grapes));
+      localStorage.setItem(SCORE_KEY, String(score));
     } catch {}
-  }, [grapes, mounted]);
+  }, [grapes, score, mounted]);
+
+  // Completing earns 1; a merge earns the number of tasks the new grape holds.
+  const addScore = (value: number, level: number, x: number, y: number) => {
+    const id = newId();
+    setScore((s) => s + value);
+    setPops((prev) => [...prev, { id, value, level, x, y }]);
+    setTimeout(() => setPops((prev) => prev.filter((p) => p.id !== id)), 900);
+  };
 
   const addTodo = () => {
     const trimmed = input.trim();
@@ -82,6 +103,9 @@ export default function Home() {
   };
 
   const completeGrape = (id: string) => {
+    const g = grapes.find((g) => g.id === id);
+    if (!g || g.done) return;
+    addScore(1, g.level, g.x, g.y);
     setGrapes((prev) => prev.map((g) => (g.id === id ? { ...g, done: true } : g)));
   };
 
@@ -90,10 +114,11 @@ export default function Home() {
   };
 
   const mergeGrapes = (dragId: string, targetId: string) => {
+    const a = grapes.find((g) => g.id === dragId);
+    const b = grapes.find((g) => g.id === targetId);
+    if (!a || !b || !a.done || !b.done || a.level !== b.level) return;
+    addScore(a.tasks.length + b.tasks.length, b.level + 1, b.x, b.y);
     setGrapes((prev) => {
-      const a = prev.find((g) => g.id === dragId);
-      const b = prev.find((g) => g.id === targetId);
-      if (!a || !b || !a.done || !b.done || a.level !== b.level) return prev;
       const merged: Grape = {
         id: newId(),
         level: b.level + 1,
@@ -107,12 +132,13 @@ export default function Home() {
   };
 
   const reset = () => {
-    if (grapes.length && confirm("clear all grapes?")) setGrapes([]);
+    if ((grapes.length || score) && confirm("clear all grapes and score?")) {
+      setGrapes([]);
+      setScore(0);
+    }
   };
 
-  const doneCount = grapes.reduce((n, g) => n + (g.done ? g.tasks.length : 0), 0);
   const activeCount = grapes.filter((g) => !g.done).length;
-  const biggest = grapes.reduce((m, g) => (g.done ? Math.max(m, g.level) : m), 0);
   const levels = grapes.filter((g) => g.done).map((g) => g.level);
   const canMerge = levels.some((l, i) => levels.indexOf(l) !== i);
 
@@ -124,7 +150,7 @@ export default function Home() {
     const blob = await res.blob();
     const file = new File([blob], "grapes.png", { type: "image/png" });
     if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: "3todos", text: `${doneCount} done. i did it.`, url: "https://3todos.vercel.app" });
+      await navigator.share({ files: [file], title: "3todos", text: `score ${score}. i did it.`, url: "https://3todos.vercel.app" });
     } else {
       const a = document.createElement("a");
       a.href = dataUrl;
@@ -160,15 +186,14 @@ export default function Home() {
           </button>
         </div>
 
-        {grapes.length > 0 && (
+        {(grapes.length > 0 || score > 0) && (
           <div className="mt-3 sm:mt-4 text-xs text-zinc-900 space-y-1">
             <p>
-              {activeCount} to go · {doneCount} done
-              {biggest > 1 && <span> · biggest ×{Math.pow(2, biggest - 1)}</span>}
+              score {score} · {activeCount} to go
             </p>
             <p className="flex gap-3">
               {canMerge && <span className="opacity-50">drag a grape onto its twin.</span>}
-              {doneCount > 0 && (
+              {score > 0 && (
                 <button onClick={handleShare} className="border-b border-zinc-900 hover:opacity-50 transition">
                   share
                 </button>
@@ -182,7 +207,7 @@ export default function Home() {
       </div>
 
       {mounted && (
-        <Grapes grapes={grapes} onComplete={completeGrape} onMove={moveGrape} onMerge={mergeGrapes} />
+        <Grapes grapes={grapes} onComplete={completeGrape} onMove={moveGrape} onMerge={mergeGrapes} pops={pops} />
       )}
 
       <footer className="absolute bottom-0 left-0 w-full p-4 sm:p-8 z-0 space-y-1 sm:space-y-1.5 pointer-events-none">

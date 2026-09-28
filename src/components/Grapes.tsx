@@ -1,13 +1,18 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import type { Grape } from "@/app/page";
+import type { Grape, ScorePop } from "@/app/page";
 
 export const HEADER_H = 200;
 const PAD = 16;
 
-// Deeper purple as grapes grow. Level 1 is a single completed task.
-const LEVEL_COLORS = ["#d8b4fe", "#c084fc", "#a855f7", "#9333ea", "#7e22ce", "#6b21a8", "#581c87", "#3b0764"];
+// Shine Muscat greens, ripening deeper as grapes grow. Level 1 is a single completed task.
+const LEVEL_COLORS = ["#f2ff8a", "#e6ff4d", "#d4ff1f", "#c2f500", "#a8e000", "#8cc800", "#6fa800", "#548600"];
+
+// Light greens need dark text; deeper ones switch to white.
+function levelText(level: number) {
+  return level >= 7 ? "text-white" : "text-lime-950";
+}
 
 export function levelColor(level: number) {
   return LEVEL_COLORS[Math.min(level - 1, LEVEL_COLORS.length - 1)];
@@ -20,7 +25,7 @@ export function grapeSize(level: number, vw: number, vh: number) {
 }
 
 // Grapes store their center as a fraction of the viewport; clamp so they stay on screen.
-function center(g: Grape, size: number, vw: number, vh: number) {
+function center(g: Pick<Grape, "x" | "y">, size: number, vw: number, vh: number) {
   const r = size / 2;
   return {
     x: Math.min(Math.max(g.x * vw, PAD + r), vw - PAD - r),
@@ -33,6 +38,7 @@ interface Props {
   onComplete: (id: string) => void;
   onMove: (id: string, x: number, y: number) => void;
   onMerge: (dragId: string, targetId: string) => void;
+  pops: ScorePop[];
 }
 
 interface DragInfo {
@@ -45,7 +51,7 @@ interface DragInfo {
   moved: boolean;
 }
 
-export default function Grapes({ grapes, onComplete, onMove, onMerge }: Props) {
+export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Props) {
   const [view, setView] = useState({ vw: 0, vh: 0 });
   const [drag, setDrag] = useState<{ id: string; x: number; y: number } | null>(null);
   const [target, setTarget] = useState<string | null>(null);
@@ -206,7 +212,7 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge }: Props) {
                 }}
               >
                 <span
-                  className={`leading-snug pointer-events-none ${g.done ? "text-white" : "text-zinc-900"} ${
+                  className={`leading-snug pointer-events-none ${g.done ? levelText(g.level) : "text-zinc-900"} ${
                     g.tasks.length > 1 ? "text-sm sm:text-base" : "text-[10px] sm:text-xs"
                   }`}
                   style={{
@@ -224,7 +230,27 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge }: Props) {
           </div>
         );
       })}
+      {pops.map((p) => {
+        const c = center(p, grapeSize(p.level, vw, vh), vw, vh);
+        return (
+          <span
+            key={p.id}
+            className="absolute z-20 text-xs sm:text-sm text-zinc-900 pointer-events-none"
+            style={{
+              left: c.x,
+              top: c.y - grapeSize(p.level, vw, vh) / 2,
+              animation: "scorePop 0.9s ease-out forwards",
+            }}
+          >
+            +{p.value}
+          </span>
+        );
+      })}
       <style>{`
+        @keyframes scorePop {
+          from { transform: translate(-50%, 0); opacity: 1; }
+          to { transform: translate(-50%, -32px); opacity: 0; }
+        }
         @keyframes grapeIn {
           from { transform: scale(0.4); opacity: 0; }
           to { transform: scale(1); opacity: 1; }

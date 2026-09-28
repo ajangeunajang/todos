@@ -256,13 +256,17 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Pr
                   <div className="absolute left-1/2 top-full -translate-x-1/2 mt-1 flex flex-col items-center pointer-events-none">
                     {isPeeking && (
                       <ul
-                        className={`leading-snug text-[10px] sm:text-xs text-zinc-900 whitespace-nowrap text-center ${
+                        className={`space-y-0.5 leading-snug text-[10px] sm:text-xs text-zinc-900 whitespace-nowrap text-center ${
                           peekAbove ? "absolute bottom-full" : "order-last mt-1"
                         }`}
                         style={{ marginBottom: peekAbove ? size + 8 : undefined, animation: "peekIn 0.25s ease-out" }}
                       >
                         {g.tasks.slice(0, PEEK_MAX).map((t, i) => (
-                          <li key={i}>{t}</li>
+                          <li key={i}>
+                            <span className="px-1 text-lime-950" style={{ backgroundColor: GRAPE_COLOR }}>
+                              {t}
+                            </span>
+                          </li>
                         ))}
                         {g.tasks.length > PEEK_MAX && <li className="opacity-50">+{g.tasks.length - PEEK_MAX} more</li>}
                       </ul>

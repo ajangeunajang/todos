@@ -69,8 +69,10 @@ export default function Home() {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       // Restore after mount so server and client render the same first frame.
+      const parsed: Grape[] = saved ? JSON.parse(saved) : [];
+      // An empty board (first visit, or one saved by an older version) gets the default grape.
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setGrapes(saved ? JSON.parse(saved) : defaultGrapes());
+      setGrapes(parsed.length ? parsed : defaultGrapes());
       setScore(Number(localStorage.getItem(SCORE_KEY)) || 0);
     } catch {}
     setMounted(true);

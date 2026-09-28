@@ -197,7 +197,9 @@ export default function Home() {
 
       {(grapes.length > 0 || score > 0) && (
         <div className="absolute top-0 right-0 z-10 p-4 sm:p-8 text-right text-xs sm:text-sm text-zinc-900 space-y-1">
-          <p>score {score} ({activeCount} to go)</p>
+          <p>
+            <span className="bg-[#c0ed00] text-lime-950 px-1">score {score}</span> ({activeCount} to go)
+          </p>
           <p className="flex gap-3 justify-end">
             {score > 0 && (
               <button onClick={handleShare} className="border-b border-zinc-900 hover:opacity-50 transition">

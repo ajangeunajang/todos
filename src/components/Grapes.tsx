@@ -256,7 +256,7 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Pr
                   <div className="absolute left-1/2 top-full -translate-x-1/2 mt-1 flex flex-col items-center pointer-events-none">
                     {isPeeking && (
                       <ul
-                        className={`space-y-0.5 leading-snug text-[10px] sm:text-xs text-zinc-900 whitespace-nowrap text-center ${
+                        className={`leading-tight text-[10px] sm:text-xs text-zinc-900 whitespace-nowrap text-center ${
                           peekAbove ? "absolute bottom-full" : "order-last mt-1"
                         }`}
                         style={{ marginBottom: peekAbove ? size + 8 : undefined, animation: "peekIn 0.25s ease-out" }}

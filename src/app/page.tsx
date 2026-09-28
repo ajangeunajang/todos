@@ -157,7 +157,7 @@ export default function Home() {
     const blob = await res.blob();
     const file = new File([blob], "grapes.png", { type: "image/png" });
     if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: "極大粒シャインマスカット", text: `score ${score}. i did it.`, url: "https://merge-todos.vercel.app" });
+      await navigator.share({ files: [file], title: "極大粒シャインマスカット샤인머스켓", text: `score ${score}. i did it.`, url: "https://merge-todos.vercel.app" });
     } else {
       const a = document.createElement("a");
       a.href = dataUrl;

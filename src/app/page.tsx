@@ -71,6 +71,8 @@ export default function Home() {
   const [grapes, setGrapes] = useState<Grape[]>([]);
   const [score, setScore] = useState(0);
   const [pops, setPops] = useState<ScorePop[]>([]);
+  // A captured share image waiting for a second tap (see shareImage), keyed to the board it shows.
+  const [readyShare, setReadyShare] = useState<{ file: File; key: string } | null>(null);
   const [input, setInput] = useState("");
   const [mounted, setMounted] = useState(false);
   const [time, setTime] = useState("");
@@ -164,9 +166,50 @@ export default function Home() {
   const levels = grapes.filter((g) => g.done).map((g) => g.level);
   const canMerge = levels.some((l, i) => levels.indexOf(l) !== i);
 
+  const shareText = `${score}/${maxScore}. i did it.`;
+  const shareUrl = "https://merge-todos.vercel.app";
+  const shareKey = `${score}:${grapes.map((g) => g.id).join(",")}`;
+  // Android share targets (e.g. KakaoTalk) reject an image bundled with text, so Android
+  // shares the image alone and gets the message on the clipboard instead.
+  const isAndroid = typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
+
+  const downloadImage = (file: File) => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(file);
+    a.download = file.name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+
+  const shareImage = async (file: File) => {
+    const data: ShareData = isAndroid
+      ? { files: [file] }
+      : { files: [file], title: "極大粒シャインマスカット샤인머스켓", text: shareText, url: shareUrl };
+    if (!navigator.canShare?.(data)) {
+      downloadImage(file);
+      return;
+    }
+    try {
+      await navigator.share(data);
+      setReadyShare(null);
+    } catch (e) {
+      const name = e instanceof DOMException ? e.name : "";
+      // Chrome only allows share() shortly after a tap; capturing can outlast that window.
+      // Keep the image so the next tap shares it immediately.
+      if (name === "NotAllowedError") setReadyShare({ file, key: shareKey });
+      else if (name === "AbortError") setReadyShare(null);
+      else downloadImage(file);
+    }
+  };
+
   const handleShare = async () => {
     const main = mainRef.current;
     if (!main) return;
+    if (isAndroid) navigator.clipboard?.writeText(`${shareText} ${shareUrl}`).catch(() => {});
+    if (readyShare?.key === shareKey) {
+      await shareImage(readyShare.file);
+      return;
+    }
     const { toCanvas } = await import("html-to-image");
     const ratio = 2;
     // html-to-image drops the grape photos in some browsers, so capture without them
@@ -195,16 +238,7 @@ export default function Home() {
     }
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
     if (!blob) return;
-    const file = new File([blob], "grapes.png", { type: "image/png" });
-    if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: "極大粒シャインマスカット샤인머스켓", text: `${score}/${maxScore}. i did it.`, url: "https://merge-todos.vercel.app" });
-    } else {
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "grapes.png";
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    }
+    await shareImage(new File([blob], "grapes.png", { type: "image/png", lastModified: Date.now() }));
   };
 
   return (
@@ -246,7 +280,7 @@ export default function Home() {
           <p className="flex gap-3 justify-end">
             {score > 0 && (
               <button onClick={handleShare} className="border-b border-zinc-900 hover:opacity-50 transition">
-                share
+                {readyShare?.key === shareKey ? "tap to share" : "share"}
               </button>
             )}
             <button onClick={reset} className="border-b border-zinc-900 hover:opacity-50 transition">

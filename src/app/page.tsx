@@ -1,32 +1,61 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Circles from "@/components/Circles";
+import Grapes, { HEADER_H, grapeSize } from "@/components/Grapes";
 
-interface Todo {
-  text: string;
+export interface Grape {
+  id: string;
+  level: number;
   done: boolean;
+  tasks: string[];
+  // Center position as a fraction of the viewport (0–1).
+  x: number;
+  y: number;
 }
 
-export type SlotState =
-  | { kind: "empty" }
-  | { kind: "active"; todo: Todo }
-  | { kind: "done"; todo: Todo };
+const STORAGE_KEY = "grapes";
 
-const INITIAL_SLOTS: SlotState[] = [
-  { kind: "empty" },
-  { kind: "empty" },
-  { kind: "empty" },
-];
+const newId = () => Math.random().toString(36).slice(2, 10);
+
+function spawnPosition(existing: Grape[]) {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const size = grapeSize(1, vw, vh);
+  const r = size / 2;
+  const minX = 16 + r;
+  const maxX = vw - 16 - r;
+  const minY = HEADER_H + r;
+  const maxY = vh - 16 - r;
+
+  let pos = { x: 0, y: 0 };
+  for (let attempt = 0; attempt < 300; attempt++) {
+    pos = {
+      x: Math.random() * (maxX - minX) + minX,
+      y: Math.random() * (maxY - minY) + minY,
+    };
+    const clear = existing.every((g) => {
+      const gr = grapeSize(g.level, vw, vh) / 2;
+      return Math.hypot(g.x * vw - pos.x, g.y * vh - pos.y) > gr + r + 8;
+    });
+    if (clear) break;
+  }
+  return { x: pos.x / vw, y: pos.y / vh };
+}
 
 export default function Home() {
-  const [slots, setSlots] = useState<SlotState[]>(INITIAL_SLOTS);
+  const [grapes, setGrapes] = useState<Grape[]>([]);
   const [input, setInput] = useState("");
   const [mounted, setMounted] = useState(false);
   const [time, setTime] = useState("");
   const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      // Restore after mount so server and client render the same first frame.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (saved) setGrapes(JSON.parse(saved));
+    } catch {}
     setMounted(true);
     const tick = () =>
       setTime(new Date().toLocaleTimeString("en-GB", { timeZone: "Asia/Seoul", hour12: false }));
@@ -35,40 +64,57 @@ export default function Home() {
     return () => clearInterval(id);
   }, []);
 
-  const isFull = slots.every((s) => s.kind !== "empty");
-  const allDone = slots.every((s) => s.kind === "done");
+  useEffect(() => {
+    if (!mounted) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(grapes));
+    } catch {}
+  }, [grapes, mounted]);
 
   const addTodo = () => {
     const trimmed = input.trim();
-    if (!trimmed || isFull) return;
-    setSlots((prev) => {
-      const next = [...prev];
-      const idx = next.findIndex((s) => s.kind === "empty");
-      next[idx] = { kind: "active", todo: { text: trimmed, done: false } };
-      return next;
-    });
+    if (!trimmed) return;
+    setGrapes((prev) => [
+      ...prev,
+      { id: newId(), level: 1, done: false, tasks: [trimmed], ...spawnPosition(prev) },
+    ]);
     setInput("");
   };
 
-  const toggleSlot = (i: number) => {
-    setSlots((prev) => {
-      const next = [...prev];
-      const slot = next[i];
-      if (slot.kind !== "active") return prev;
-      next[i] = { kind: "active", todo: { ...slot.todo, done: !slot.todo.done } };
-      return next;
+  const completeGrape = (id: string) => {
+    setGrapes((prev) => prev.map((g) => (g.id === id ? { ...g, done: true } : g)));
+  };
+
+  const moveGrape = (id: string, x: number, y: number) => {
+    setGrapes((prev) => prev.map((g) => (g.id === id ? { ...g, x, y } : g)));
+  };
+
+  const mergeGrapes = (dragId: string, targetId: string) => {
+    setGrapes((prev) => {
+      const a = prev.find((g) => g.id === dragId);
+      const b = prev.find((g) => g.id === targetId);
+      if (!a || !b || !a.done || !b.done || a.level !== b.level) return prev;
+      const merged: Grape = {
+        id: newId(),
+        level: b.level + 1,
+        done: true,
+        tasks: [...b.tasks, ...a.tasks],
+        x: b.x,
+        y: b.y,
+      };
+      return [...prev.filter((g) => g.id !== dragId && g.id !== targetId), merged];
     });
   };
 
-  const deleteSlot = (i: number) => {
-    setSlots((prev) => {
-      const next = [...prev];
-      const slot = next[i];
-      if (slot.kind !== "active") return prev;
-      next[i] = { kind: "done", todo: slot.todo };
-      return next;
-    });
+  const reset = () => {
+    if (grapes.length && confirm("clear all grapes?")) setGrapes([]);
   };
+
+  const doneCount = grapes.reduce((n, g) => n + (g.done ? g.tasks.length : 0), 0);
+  const activeCount = grapes.filter((g) => !g.done).length;
+  const biggest = grapes.reduce((m, g) => (g.done ? Math.max(m, g.level) : m), 0);
+  const levels = grapes.filter((g) => g.done).map((g) => g.level);
+  const canMerge = levels.some((l, i) => levels.indexOf(l) !== i);
 
   const handleShare = async () => {
     if (!mainRef.current) return;
@@ -76,19 +122,16 @@ export default function Home() {
     const dataUrl = await toPng(mainRef.current, { pixelRatio: 2 });
     const res = await fetch(dataUrl);
     const blob = await res.blob();
-    const file = new File([blob], "3todos.png", { type: "image/png" });
+    const file = new File([blob], "grapes.png", { type: "image/png" });
     if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: "3todos", text: "3/3. i did it.", url: "https://3todos.vercel.app" });
+      await navigator.share({ files: [file], title: "3todos", text: `${doneCount} done. i did it.`, url: "https://3todos.vercel.app" });
     } else {
       const a = document.createElement("a");
       a.href = dataUrl;
-      a.download = "3todos.png";
+      a.download = "grapes.png";
       a.click();
     }
   };
-
-  const activeTodos = slots.filter((s) => s.kind === "active");
-  const doneTodos = slots.filter((s) => s.kind === "done");
 
   return (
     <main ref={mainRef} className="relative min-h-svh bg-white overflow-hidden">
@@ -97,7 +140,7 @@ export default function Home() {
           {new Date().toISOString().slice(0, 10)}{time ? ` ${time}` : ""}
         </p>
         <h1 className="text-xs sm:text-sm text-zinc-900 mb-1">today&apos;s todos</h1>
-        <p className="text-xs sm:text-sm text-zinc-900 mb-4 sm:mb-6">just 3. no more.</p>
+        <p className="text-xs sm:text-sm text-zinc-900 mb-4 sm:mb-6">finish two. merge them.</p>
 
         <div className="flex gap-2 items-end">
           <input
@@ -105,65 +148,53 @@ export default function Home() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && addTodo()}
-            placeholder={isFull ? "that's enough for today." : "add a task..."}
-            disabled={isFull}
-            className="flex-1 bg-transparent text-zinc-900 placeholder-zinc-900 py-1.5 sm:py-2 text-xs sm:text-sm outline-none border-b border-zinc-900 disabled:opacity-30 transition"
+            placeholder="add a task..."
+            className="flex-1 bg-transparent text-zinc-900 placeholder-zinc-900 py-1.5 sm:py-2 text-xs sm:text-sm outline-none border-b border-zinc-900 transition"
           />
           <button
             onClick={addTodo}
-            disabled={isFull || !input.trim()}
+            disabled={!input.trim()}
             className="text-zinc-900 text-lg sm:text-xl leading-none disabled:opacity-30 pb-1.5 sm:pb-2 hover:opacity-60 active:scale-95 transition"
           >
             +
           </button>
         </div>
 
-        {activeTodos.length > 0 && (
-          <div className="mt-3 sm:mt-4 text-xs text-zinc-900">
-            {doneTodos.length > 0 && (
-              <span>{doneTodos.length} completed · </span>
-            )}
-            <span>{activeTodos.filter((s) => s.kind === "active" && s.todo.done).length}/{activeTodos.length} checked</span>
+        {grapes.length > 0 && (
+          <div className="mt-3 sm:mt-4 text-xs text-zinc-900 space-y-1">
+            <p>
+              {activeCount} to go · {doneCount} done
+              {biggest > 1 && <span> · biggest ×{Math.pow(2, biggest - 1)}</span>}
+            </p>
+            <p className="flex gap-3">
+              {canMerge && <span className="opacity-50">drag a grape onto its twin.</span>}
+              {doneCount > 0 && (
+                <button onClick={handleShare} className="border-b border-zinc-900 hover:opacity-50 transition">
+                  share
+                </button>
+              )}
+              <button onClick={reset} className="border-b border-zinc-900 hover:opacity-50 transition">
+                reset
+              </button>
+            </p>
           </div>
         )}
       </div>
 
-      {mounted && <Circles slots={slots} onToggle={toggleSlot} onDelete={deleteSlot} />}
-
-      {allDone && (
-        <div
-          className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none bg-white/30 backdrop-blur-md"
-          style={{ animation: "fadeIn 0.8s ease forwards" }}
-        >
-          <div className="text-center pointer-events-auto">
-            <p className="text-xs sm:text-sm text-zinc-900 mb-4">3/3. you did it.</p>
-            <button
-              onClick={handleShare}
-              className="text-xs sm:text-sm text-zinc-900 border-b border-zinc-900 pb-0.5 hover:opacity-50 active:scale-95 transition"
-            >
-              share
-            </button>
-          </div>
-        </div>
+      {mounted && (
+        <Grapes grapes={grapes} onComplete={completeGrape} onMove={moveGrape} onMerge={mergeGrapes} />
       )}
 
-      <footer className="absolute bottom-0 left-0 w-full p-4 sm:p-8 z-10 space-y-1 sm:space-y-1.5">
+      <footer className="absolute bottom-0 left-0 w-full p-4 sm:p-8 z-0 space-y-1 sm:space-y-1.5 pointer-events-none">
         <p className="text-xs sm:text-sm text-zinc-900">© 2026. 3todos. All rights reserved.</p>
         <p className="text-xs sm:text-sm text-zinc-900">Inquiries <span style={{ fontFamily: "sans-serif" }}>☞</span> ajangeunajang@gmail.com</p>
         <p className="text-xs sm:text-sm text-zinc-900">
           Design and Developed by{" "}
-          <a href="https://www.ajangeunajang.com/" target="_blank" rel="noopener" className="no-underline" style={{ borderBottom: "1px dotted currentColor", paddingBottom: "2px" }}>
+          <a href="https://www.ajangeunajang.com/" target="_blank" rel="noopener" className="no-underline pointer-events-auto" style={{ borderBottom: "1px dotted currentColor", paddingBottom: "2px" }}>
             Euna Jang
           </a>
         </p>
       </footer>
-
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-      `}</style>
     </main>
   );
 }

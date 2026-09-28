@@ -221,7 +221,7 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Pr
                 if (el) magnetRefs.current.set(g.id, el);
                 else magnetRefs.current.delete(g.id);
               }}
-              className="w-full h-full"
+              className="relative w-full h-full"
               style={{ transition: "transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)" }}
             >
               <button
@@ -252,34 +252,7 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Pr
                     style={{ rotate: `${tilt(g.id)}deg` }}
                   />
                 )}
-                {isPhoto ? (
-                  <div className="absolute left-1/2 top-full -translate-x-1/2 mt-1 flex flex-col items-center pointer-events-none">
-                    {isPeeking && (
-                      <ul
-                        className={`leading-tight text-[10px] sm:text-xs text-zinc-900 whitespace-nowrap text-center ${
-                          peekAbove ? "absolute bottom-full" : "order-last mt-1"
-                        }`}
-                        style={{ marginBottom: peekAbove ? size + 8 : undefined, animation: "peekIn 0.25s ease-out" }}
-                      >
-                        {g.tasks.slice(0, PEEK_MAX).map((t, i) => (
-                          <li key={i}>
-                            <span className="px-1 text-lime-950" style={{ backgroundColor: GRAPE_COLOR }}>
-                              {t}
-                            </span>
-                          </li>
-                        ))}
-                        {g.tasks.length > PEEK_MAX && <li className="opacity-50">+{g.tasks.length - PEEK_MAX} more</li>}
-                      </ul>
-                    )}
-                    <span
-                      className="px-1 leading-snug text-xs sm:text-sm text-lime-950"
-                      // Key-colour highlight behind the count (compensated for multiply, like the grapes).
-                      style={{ backgroundColor: GRAPE_COLOR }}
-                    >
-                      {g.tasks.length}
-                    </span>
-                  </div>
-                ) : (
+                {!isPhoto && (
                   <span
                     className={`relative leading-snug pointer-events-none text-[10px] sm:text-xs ${
                       g.done ? "text-lime-950" : "text-zinc-900"
@@ -296,6 +269,35 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Pr
                   </span>
                 )}
               </button>
+              {/* Outside the button so the label can hang below the grape (captures clip button overflow). */}
+              {isPhoto && (
+                <div className="absolute left-1/2 top-full -translate-x-1/2 mt-1 flex flex-col items-center pointer-events-none">
+                  {isPeeking && (
+                    <ul
+                      className={`leading-tight text-[10px] sm:text-xs text-zinc-900 whitespace-nowrap text-center ${
+                        peekAbove ? "absolute bottom-full" : "order-last mt-1"
+                      }`}
+                      style={{ marginBottom: peekAbove ? size + 8 : undefined, animation: "peekIn 0.25s ease-out" }}
+                    >
+                      {g.tasks.slice(0, PEEK_MAX).map((t, i) => (
+                        <li key={i}>
+                          <span className="px-1 text-lime-950" style={{ backgroundColor: GRAPE_COLOR }}>
+                            {t}
+                          </span>
+                        </li>
+                      ))}
+                      {g.tasks.length > PEEK_MAX && <li className="opacity-50">+{g.tasks.length - PEEK_MAX} more</li>}
+                    </ul>
+                  )}
+                  <span
+                    className="px-1 leading-snug text-xs sm:text-sm text-lime-950"
+                    // Key-colour highlight behind the count (compensated for multiply, like the grapes).
+                    style={{ backgroundColor: GRAPE_COLOR }}
+                  >
+                    {g.tasks.length}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         );

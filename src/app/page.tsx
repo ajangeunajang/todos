@@ -165,21 +165,45 @@ export default function Home() {
   const canMerge = levels.some((l, i) => levels.indexOf(l) !== i);
 
   const handleShare = async () => {
-    if (!mainRef.current) return;
-    const { toPng } = await import("html-to-image");
-    // Safari often paints embedded images only from the second capture on, so warm up first.
-    await toPng(mainRef.current, { pixelRatio: 1 });
-    const dataUrl = await toPng(mainRef.current, { pixelRatio: 2 });
-    const res = await fetch(dataUrl);
-    const blob = await res.blob();
+    const main = mainRef.current;
+    if (!main) return;
+    const { toCanvas } = await import("html-to-image");
+    const ratio = 2;
+    // html-to-image drops the grape photos in some browsers, so capture without them
+    // and paint the already-loaded photos onto the canvas ourselves.
+    const canvas = await toCanvas(main, {
+      pixelRatio: ratio,
+      filter: (node) => !(node instanceof HTMLImageElement),
+    });
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      const origin = main.getBoundingClientRect();
+      ctx.globalCompositeOperation = "multiply";
+      main.querySelectorAll("img").forEach((img) => {
+        const box = img.parentElement?.getBoundingClientRect();
+        if (!box || !img.complete) return;
+        const { rotate, scale } = getComputedStyle(img);
+        ctx.save();
+        ctx.scale(ratio, ratio);
+        ctx.translate(box.left - origin.left + box.width / 2, box.top - origin.top + box.height / 2);
+        ctx.rotate((parseFloat(rotate) || 0) * (Math.PI / 180));
+        const k = parseFloat(scale) || 1;
+        ctx.scale(k, k);
+        ctx.drawImage(img, -box.width / 2, -box.height / 2, box.width, box.height);
+        ctx.restore();
+      });
+    }
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (!blob) return;
     const file = new File([blob], "grapes.png", { type: "image/png" });
     if (navigator.canShare?.({ files: [file] })) {
       await navigator.share({ files: [file], title: "極大粒シャインマスカット샤인머스켓", text: `${score}/${maxScore}. i did it.`, url: "https://merge-todos.vercel.app" });
     } else {
       const a = document.createElement("a");
-      a.href = dataUrl;
+      a.href = URL.createObjectURL(blob);
       a.download = "grapes.png";
       a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     }
   };
 
@@ -215,7 +239,7 @@ export default function Home() {
       </div>
 
       {(grapes.length > 0 || score > 0) && (
-        <div className="absolute top-0 right-0 z-10 p-4 sm:p-8 text-right text-xs sm:text-sm text-zinc-900 space-y-1">
+        <div className="absolute top-0 right-0 z-10 p-4 sm:p-8 text-right text-xs sm:text-sm text-zinc-900 space-y-1 whitespace-nowrap">
           <p>
             score <span className="bg-[#c0ed00] text-lime-950 px-1">{score}</span> ({activeCount} to go)
           </p>

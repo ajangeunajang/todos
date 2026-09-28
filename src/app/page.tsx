@@ -236,9 +236,10 @@ export default function Home() {
         ctx.restore();
       });
     }
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+    // JPEG rather than PNG: KakaoTalk on Android rejects shared PNGs as an unsupported format.
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
     if (!blob) return;
-    await shareImage(new File([blob], "grapes.png", { type: "image/png", lastModified: Date.now() }));
+    await shareImage(new File([blob], "merge-todos.jpg", { type: "image/jpeg", lastModified: Date.now() }));
   };
 
   return (

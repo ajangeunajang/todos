@@ -9,6 +9,7 @@ const PAD = 16;
 // Room under the lowest grape for its count label.
 const LABEL_H = 24;
 const PEEK_MS = 3000;
+const MAGNET_MAX = 180;
 const PEEK_MAX = 8;
 
 // Shine Muscat green (#c0ed00) for every completed grape; size alone shows the level.
@@ -90,23 +91,23 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Pr
 
   const { vw, vh } = view;
 
-  // Gentle magnet pull toward the cursor, skipped while dragging.
+  // Gentle magnet pull toward a mouse cursor. Touch has no hover, and taps would otherwise
+  // leave grapes stuck leaning toward the finger. While a drag is in progress nothing moves
+  // except the dragged grape.
   useEffect(() => {
     if (!vw) return;
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMouseMove = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse" || dragRef.current) return;
       grapes.forEach((g) => {
         const el = magnetRefs.current.get(g.id);
         if (!el) return;
-        if (dragRef.current?.moved) {
-          el.style.transform = "translate(0px, 0px)";
-          return;
-        }
         const size = grapeSize(g.level, vw, vh);
         const c = center(g, size, vw, vh);
         const dx = e.clientX - c.x;
         const dy = e.clientY - c.y;
         const dist = Math.hypot(dx, dy);
-        const radius = size * 1.5;
+        // Capped so big grapes don't all lean in from across the screen at once.
+        const radius = Math.min(size * 1.5, MAGNET_MAX);
         if (dist < radius) {
           const pull = Math.pow(1 - dist / radius, 2) * 0.35;
           el.style.transform = `translate(${dx * pull}px, ${dy * pull}px)`;
@@ -115,8 +116,8 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Pr
         }
       });
     };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    window.addEventListener("pointermove", handleMouseMove);
+    return () => window.removeEventListener("pointermove", handleMouseMove);
   }, [grapes, vw, vh]);
 
   if (!vw) return null;
@@ -140,6 +141,8 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Pr
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {}
+    // Settle any magnet lean so the grapes hold still for the drag.
+    magnetRefs.current.forEach((el) => (el.style.transform = "translate(0px, 0px)"));
     const c = center(g, grapeSize(g.level, vw, vh), vw, vh);
     dragRef.current = {
       id: g.id,
@@ -203,7 +206,9 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Pr
         return (
           <div
             key={g.id}
-            className="absolute"
+            className="absolute select-none"
+            // Never start the browser's own drag (it drags the whole page selection along).
+            onDragStart={(e) => e.preventDefault()}
             style={{
               left: c.x - size / 2,
               top: c.y - size / 2,

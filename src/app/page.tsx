@@ -2,6 +2,16 @@
 
 import { useState, useEffect, useRef } from "react";
 import Grapes, { HEADER_H, grapeSize } from "@/components/Grapes";
+import { signInWithGoogle, signOut, useUser } from "@/lib/auth";
+import {
+  DEFAULT_GRAPE_PREFIX,
+  clearLocalBoard,
+  loadAccountBoard,
+  readLocalBoard,
+  saveAccountBoard,
+  writeLocalBoard,
+} from "@/lib/board";
+import { isSupabaseConfigured } from "@/lib/supabase";
 
 export interface Grape {
   id: string;
@@ -21,8 +31,8 @@ export interface ScorePop {
   y: number;
 }
 
-const STORAGE_KEY = "grapes";
-const SCORE_KEY = "grapes-score";
+// Account saves are batched: dragging changes positions many times a second.
+const SAVE_DELAY_MS = 800;
 
 // Seoul date and time, e.g. "2026-09-29 14:03:27".
 function formatNow(d: Date) {
@@ -34,7 +44,7 @@ const newId = () => Math.random().toString(36).slice(2, 10);
 
 // A fresh board starts with one merged Shine Muscat (2) so the photo grape is visible right away.
 const defaultGrapes = (): Grape[] => [
-  { id: newId(), level: 2, done: true, tasks: ["open merge-todos", "well begun is half done"], x: 0.5, y: 0.6 },
+  { id: DEFAULT_GRAPE_PREFIX + newId(), level: 2, done: true, tasks: ["open merge-todos", "well begun is half done"], x: 0.5, y: 0.6 },
 ];
 
 // Points a grape holding n tasks (a power of two, n = 2^k) is worth once earned:
@@ -83,17 +93,23 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [time, setTime] = useState("");
   const mainRef = useRef<HTMLElement>(null);
+  const user = useUser();
+  // Account whose board is on screen; null while showing this browser's own board.
+  const boardOwner = useRef<string | null>(null);
+  const [accountReady, setAccountReady] = useState(false);
+  const pendingSave = useRef<(() => void) | null>(null);
+
+  const showLocalBoard = () => {
+    const local = readLocalBoard();
+    // An empty board (first visit, or one saved by an older version) gets the default grape.
+    setGrapes(local.grapes.length ? local.grapes : defaultGrapes());
+    setScore(local.score);
+  };
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      // Restore after mount so server and client render the same first frame.
-      const parsed: Grape[] = saved ? JSON.parse(saved) : [];
-      // An empty board (first visit, or one saved by an older version) gets the default grape.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setGrapes(parsed.length ? parsed : defaultGrapes());
-      setScore(Number(localStorage.getItem(SCORE_KEY)) || 0);
-    } catch {}
+    // Restore after mount so server and client render the same first frame.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    showLocalBoard();
     setMounted(true);
     const tick = () =>
       setTime(formatNow(new Date()));
@@ -102,13 +118,73 @@ export default function Home() {
     return () => clearInterval(id);
   }, []);
 
+  // Signing in swaps in the account board (merging this browser's progress into it);
+  // signing out goes back to this browser's board.
+  useEffect(() => {
+    if (!mounted || user === undefined) return;
+    if (!user) {
+      if (boardOwner.current) {
+        boardOwner.current = null;
+        setAccountReady(false);
+        showLocalBoard();
+      }
+      return;
+    }
+    if (boardOwner.current === user.id) return;
+    let cancelled = false;
+    loadAccountBoard(user.id).then(async (result) => {
+      if (cancelled || !result) return;
+      const { board, changed } = result;
+      if (changed && !(await saveAccountBoard(user.id, board))) return;
+      if (cancelled) return;
+      clearLocalBoard();
+      boardOwner.current = user.id;
+      setGrapes(board.grapes.length ? board.grapes : defaultGrapes());
+      setScore(board.score);
+      setAccountReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, mounted]);
+
   useEffect(() => {
     if (!mounted) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(grapes));
-      localStorage.setItem(SCORE_KEY, String(score));
-    } catch {}
+    const owner = boardOwner.current;
+    if (!owner) {
+      writeLocalBoard({ grapes, score });
+      return;
+    }
+    const save = () => {
+      pendingSave.current = null;
+      saveAccountBoard(owner, { grapes, score });
+    };
+    pendingSave.current = save;
+    const t = setTimeout(save, SAVE_DELAY_MS);
+    return () => clearTimeout(t);
   }, [grapes, score, mounted]);
+
+  // Flush a batched save when the tab is hidden or closed, and pick up changes made on
+  // another device when coming back.
+  useEffect(() => {
+    const onVisibility = () => {
+      const owner = boardOwner.current;
+      if (!owner) return;
+      if (document.visibilityState === "hidden") {
+        pendingSave.current?.();
+      } else if (!pendingSave.current) {
+        loadAccountBoard(owner).then((result) => {
+          if (!result || boardOwner.current !== owner || pendingSave.current) return;
+          setGrapes(result.board.grapes.length ? result.board.grapes : defaultGrapes());
+          setScore(result.board.score);
+        });
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
+
+  const boardReady = mounted && (user === null || (user !== undefined && accountReady));
 
   // Completing earns 1; a merge earns the number of tasks the new grape holds.
   const addScore = (value: number, level: number, x: number, y: number) => {
@@ -296,10 +372,29 @@ export default function Home() {
               reset
             </button>
           </p>
+          {/* Hidden until Supabase is configured; signing in syncs the board across devices. */}
+          {isSupabaseConfigured && user !== undefined && (
+            <p className="flex gap-3 justify-end">
+              {user ? (
+                <>
+                  <span className="opacity-50 truncate max-w-[12rem]">
+                    {(user.user_metadata.full_name as string | undefined) ?? user.email}
+                  </span>
+                  <button onClick={signOut} className="border-b border-zinc-900 hover:opacity-50 transition">
+                    sign out
+                  </button>
+                </>
+              ) : (
+                <button onClick={signInWithGoogle} className="border-b border-zinc-900 hover:opacity-50 transition">
+                  sign in with google
+                </button>
+              )}
+            </p>
+          )}
         </div>
       )}
 
-      {mounted && (
+      {boardReady && (
         <Grapes grapes={grapes} onToggle={toggleGrape} onMove={moveGrape} onMerge={mergeGrapes} pops={pops} />
       )}
 

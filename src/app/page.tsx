@@ -113,7 +113,7 @@ export default function Home() {
   // Completing earns 1; a merge earns the number of tasks the new grape holds.
   const addScore = (value: number, level: number, x: number, y: number) => {
     const id = newId();
-    setScore((s) => s + value);
+    setScore((s) => Math.max(0, s + value));
     setPops((prev) => [...prev, { id, value, level, x, y }]);
     setTimeout(() => setPops((prev) => prev.filter((p) => p.id !== id)), 900);
   };
@@ -128,11 +128,12 @@ export default function Home() {
     setInput("");
   };
 
-  const completeGrape = (id: string) => {
+  // Tapping a single grape marks it done; tapping it again undoes a mistaken tap (and its point).
+  const toggleGrape = (id: string) => {
     const g = grapes.find((g) => g.id === id);
-    if (!g || g.done) return;
-    addScore(1, g.level, g.x, g.y);
-    setGrapes((prev) => prev.map((g) => (g.id === id ? { ...g, done: true } : g)));
+    if (!g || g.level !== 1) return;
+    addScore(g.done ? -1 : 1, g.level, g.x, g.y);
+    setGrapes((prev) => prev.map((g) => (g.id === id ? { ...g, done: !g.done } : g)));
   };
 
   const moveGrape = (id: string, x: number, y: number) => {
@@ -299,7 +300,7 @@ export default function Home() {
       )}
 
       {mounted && (
-        <Grapes grapes={grapes} onComplete={completeGrape} onMove={moveGrape} onMerge={mergeGrapes} pops={pops} />
+        <Grapes grapes={grapes} onToggle={toggleGrape} onMove={moveGrape} onMerge={mergeGrapes} pops={pops} />
       )}
 
       <footer className="absolute bottom-0 left-0 w-full p-4 sm:p-8 z-0 space-y-1 sm:space-y-1.5 pointer-events-none">

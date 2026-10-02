@@ -44,7 +44,7 @@ function center(g: Pick<Grape, "x" | "y">, size: number, vw: number, vh: number)
 
 interface Props {
   grapes: Grape[];
-  onComplete: (id: string) => void;
+  onToggle: (id: string) => void;
   onMove: (id: string, x: number, y: number) => void;
   onMerge: (dragId: string, targetId: string) => void;
   pops: ScorePop[];
@@ -60,7 +60,7 @@ interface DragInfo {
   moved: boolean;
 }
 
-export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Props) {
+export default function Grapes({ grapes, onToggle, onMove, onMerge, pops }: Props) {
   const [view, setView] = useState({ vw: 0, vh: 0 });
   const [drag, setDrag] = useState<{ id: string; x: number; y: number } | null>(null);
   const [target, setTarget] = useState<string | null>(null);
@@ -171,8 +171,8 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Pr
     if (!d || d.id !== g.id || d.pointerId !== e.pointerId) return;
     dragRef.current = null;
     if (!d.moved) {
-      if (!g.done) onComplete(g.id);
-      else if (g.level >= 2) togglePeek(g.id);
+      if (g.level === 1) onToggle(g.id);
+      else togglePeek(g.id);
     } else {
       const x = e.clientX - d.offX;
       const y = e.clientY - d.offY;
@@ -319,7 +319,7 @@ export default function Grapes({ grapes, onComplete, onMove, onMerge, pops }: Pr
               animation: "scorePop 0.9s ease-out forwards",
             }}
           >
-            +{p.value}
+            {p.value > 0 ? `+${p.value}` : p.value}
           </span>
         );
       })}

@@ -3,7 +3,7 @@
 import { signInWithGoogle, signOut, useUser } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
-/** Google 로그인 / 로그인한 계정 — eunas calendar 와 같은 스타일, 글자 크기는 이 사이트에 맞춤 (폰 12px · 데스크톱 14px) */
+/** Google 로그인 / 로그인한 계정 — eunas calendar 구조, 버튼은 검정 대신 테두리 · 글자 크기는 이 사이트에 맞춤 (폰 12px · 데스크톱 14px) */
 export default function AuthPanel() {
   const user = useUser();
 
@@ -16,7 +16,7 @@ export default function AuthPanel() {
     return (
       <button
         onClick={signInWithGoogle}
-        className="flex h-8 sm:h-9 items-center justify-center bg-zinc-900 px-3 text-xs sm:text-sm text-white hover:bg-zinc-700"
+        className="flex h-8 sm:h-9 items-center justify-center border border-zinc-900 px-3 text-xs sm:text-sm text-zinc-900 hover:bg-zinc-900/5 transition-colors"
       >
         Sign in with Google
         <GoogleLogo className="ml-1.5 size-3 sm:size-3.5" />

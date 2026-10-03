@@ -329,10 +329,10 @@ export default function Home() {
     <main ref={mainRef} className="relative min-h-svh bg-[#ededed] overflow-hidden">
       <div className="relative z-10 p-4 sm:p-8 max-w-sm">
         {/* Filled in after mount: the page is prerendered, so a date rendered on the server would be the build date. */}
-        <p className="text-xs sm:text-sm text-zinc-900 mb-1 min-h-[1lh]">
+        <p className="text-xs sm:text-sm text-ink mb-1 min-h-[1lh]">
           {time}
         </p>
-        <h1 className="text-xs sm:text-sm text-zinc-900 mb-4 sm:mb-6">today&apos;s todos</h1>
+        <h1 className="text-xs sm:text-sm text-ink mb-4 sm:mb-6">today&apos;s todos</h1>
 
         <div className="flex gap-2 items-end">
           <input
@@ -341,34 +341,34 @@ export default function Home() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && addTodo()}
             placeholder="add a task..."
-            className="flex-1 bg-transparent text-zinc-900 placeholder-zinc-900 py-1.5 sm:py-2 text-xs sm:text-sm outline-none border-b border-zinc-900 transition"
+            className="flex-1 bg-transparent text-ink placeholder-ink py-1.5 sm:py-2 text-xs sm:text-sm outline-none border-b border-ink transition"
           />
           <button
             onClick={addTodo}
             disabled={!input.trim()}
-            className="text-zinc-900 text-lg sm:text-xl leading-none disabled:opacity-30 pb-1.5 sm:pb-2 hover:opacity-60 active:scale-95 transition"
+            className="text-ink text-lg sm:text-xl leading-none disabled:opacity-30 pb-1.5 sm:pb-2 hover:opacity-60 active:scale-95 transition"
           >
             +
           </button>
         </div>
 
         {canMerge && (
-          <p className="mt-3 sm:mt-4 text-xs text-zinc-900 opacity-50">drag a grape onto its twin.</p>
+          <p className="mt-3 sm:mt-4 text-xs text-ink opacity-50">drag a grape onto its twin.</p>
         )}
       </div>
 
       {(grapes.length > 0 || score > 0) && (
-        <div className="absolute top-0 right-0 z-10 p-4 sm:p-8 text-right text-xs sm:text-sm text-zinc-900 space-y-1 whitespace-nowrap">
+        <div className="absolute top-0 right-0 z-10 p-4 sm:p-8 text-right text-xs sm:text-sm text-ink space-y-1 whitespace-nowrap">
           <p>
             score <span className="bg-[#c0ed00] text-lime-950 px-1">{score}</span> ({activeCount} to go)
           </p>
           <p className="flex gap-3 justify-end">
             {score > 0 && (
-              <button onClick={handleShare} className="border-b border-zinc-900 hover:opacity-50 transition">
+              <button onClick={handleShare} className="border-b border-ink hover:opacity-50 transition">
                 {readyShare?.key === shareKey ? "tap to share" : "share"}
               </button>
             )}
-            <button onClick={reset} className="border-b border-zinc-900 hover:opacity-50 transition">
+            <button onClick={reset} className="border-b border-ink hover:opacity-50 transition">
               reset
             </button>
           </p>
@@ -385,9 +385,9 @@ export default function Home() {
         <div className="w-fit max-w-64 mb-3 sm:mb-4 pointer-events-auto">
           <AuthPanel />
         </div>
-        <p className="text-xs sm:text-sm text-zinc-900">© 2026. merge-todos. All rights reserved.</p>
-        <p className="text-xs sm:text-sm text-zinc-900">Inquiries <span style={{ fontFamily: "sans-serif" }}>☞</span> ajangeunajang@gmail.com</p>
-        <p className="text-xs sm:text-sm text-zinc-900">
+        <p className="text-xs sm:text-sm text-ink">© 2026. merge-todos. All rights reserved.</p>
+        <p className="text-xs sm:text-sm text-ink">Inquiries <span style={{ fontFamily: "sans-serif" }}>☞</span> ajangeunajang@gmail.com</p>
+        <p className="text-xs sm:text-sm text-ink">
           Design and Developed by{" "}
           <a href="https://www.ajangeunajang.com/" target="_blank" rel="noopener" className="no-underline pointer-events-auto" style={{ borderBottom: "1px dotted currentColor", paddingBottom: "2px" }}>
             Euna Jang

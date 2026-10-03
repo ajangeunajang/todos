@@ -260,7 +260,7 @@ export default function Grapes({ grapes, onToggle, onMove, onMerge, pops }: Prop
                 {!isPhoto && (
                   <span
                     className={`relative leading-snug pointer-events-none text-[10px] sm:text-xs ${
-                      g.done ? "text-lime-950" : "text-zinc-900"
+                      g.done ? "text-lime-950" : "text-ink"
                     }`}
                     style={{
                       wordBreak: "break-word",
@@ -279,7 +279,7 @@ export default function Grapes({ grapes, onToggle, onMove, onMerge, pops }: Prop
                 <div className="absolute left-1/2 top-full -translate-x-1/2 mt-1 flex flex-col items-center pointer-events-none">
                   {isPeeking && (
                     <ul
-                      className={`leading-tight text-[10px] sm:text-xs text-zinc-900 whitespace-nowrap text-center ${
+                      className={`leading-tight text-[10px] sm:text-xs text-ink whitespace-nowrap text-center ${
                         peekAbove ? "absolute bottom-full" : "order-last mt-1"
                       }`}
                       style={{ marginBottom: peekAbove ? size + 8 : undefined, animation: "peekIn 0.25s ease-out" }}
@@ -312,7 +312,7 @@ export default function Grapes({ grapes, onToggle, onMove, onMerge, pops }: Prop
         return (
           <span
             key={p.id}
-            className="absolute z-20 text-xs sm:text-sm text-zinc-900 pointer-events-none"
+            className="absolute z-20 text-xs sm:text-sm text-ink pointer-events-none"
             style={{
               left: c.x,
               top: c.y - grapeSize(p.level, vw, vh) / 2,

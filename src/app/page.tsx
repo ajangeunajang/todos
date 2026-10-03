@@ -363,6 +363,12 @@ export default function Home() {
 
       {(grapes.length > 0 || score > 0) && (
         <div className="absolute top-0 right-0 z-10 p-4 sm:p-8 text-right text-xs sm:text-sm text-zinc-900 space-y-1 whitespace-nowrap">
+          {/* Account first, then the score it owns. Hidden until Supabase is configured. */}
+          <div className="hidden sm:flex justify-end pb-2 text-left">
+            <div className="max-w-64">
+              <AuthPanel />
+            </div>
+          </div>
           <p>
             score <span className="bg-[#c0ed00] text-lime-950 px-1">{score}</span> ({activeCount} to go)
           </p>
@@ -376,12 +382,6 @@ export default function Home() {
               reset
             </button>
           </p>
-          {/* Hidden until Supabase is configured; signing in syncs the board across devices. */}
-          <div className="hidden sm:flex justify-end pt-1 text-left">
-            <div className="max-w-64">
-              <AuthPanel />
-            </div>
-          </div>
         </div>
       )}
 

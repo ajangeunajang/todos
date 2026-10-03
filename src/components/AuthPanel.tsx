@@ -3,23 +3,23 @@
 import { signInWithGoogle, signOut, useUser } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
-/** Google 로그인 / 로그인한 계정 — eunas calendar 와 같은 스타일 */
+/** Google 로그인 / 로그인한 계정 — eunas calendar 와 같은 스타일, 글자 크기는 이 사이트에 맞춤 (폰 12px · 데스크톱 14px) */
 export default function AuthPanel() {
   const user = useUser();
 
   // 환경변수가 없으면 로그인 없이 이 브라우저에만 저장
   if (!isSupabaseConfigured) return null;
 
-  if (user === undefined) return <div className="h-9" aria-hidden />;
+  if (user === undefined) return <div className="h-8 sm:h-9" aria-hidden />;
 
   if (!user) {
     return (
       <button
         onClick={signInWithGoogle}
-        className="flex h-9 items-center justify-center bg-zinc-900 px-3 text-sm text-white hover:bg-zinc-700"
+        className="flex h-8 sm:h-9 items-center justify-center bg-zinc-900 px-3 text-xs sm:text-sm text-white hover:bg-zinc-700"
       >
         Sign in with Google
-        <GoogleLogo className="ml-1.5 size-3.5" />
+        <GoogleLogo className="ml-1.5 size-3 sm:size-3.5" />
       </button>
     );
   }
@@ -27,10 +27,10 @@ export default function AuthPanel() {
   const name = (user.user_metadata.full_name as string | undefined) ?? user.email;
 
   return (
-    <div className="flex min-h-9 items-center justify-between gap-3 border border-zinc-900 px-3 py-2 text-sm">
+    <div className="flex min-h-8 sm:min-h-9 items-center justify-between gap-3 border border-zinc-900 px-3 py-2 text-xs sm:text-sm">
       <div className="flex min-w-0 flex-col leading-tight">
         <span className="truncate font-semibold">{name}</span>
-        {name !== user.email && <span className="truncate text-xs text-zinc-500">{user.email}</span>}
+        {name !== user.email && <span className="truncate text-[10px] sm:text-xs text-zinc-500">{user.email}</span>}
       </div>
       <button
         onClick={signOut}

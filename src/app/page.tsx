@@ -355,20 +355,10 @@ export default function Home() {
         {canMerge && (
           <p className="mt-3 sm:mt-4 text-xs text-zinc-900 opacity-50">drag a grape onto its twin.</p>
         )}
-        {/* Phones: below the input, where the header's right column has no room. */}
-        <div className="mt-3 sm:hidden">
-          <AuthPanel />
-        </div>
       </div>
 
       {(grapes.length > 0 || score > 0) && (
         <div className="absolute top-0 right-0 z-10 p-4 sm:p-8 text-right text-xs sm:text-sm text-zinc-900 space-y-1 whitespace-nowrap">
-          {/* Account first, then the score it owns. Hidden until Supabase is configured. */}
-          <div className="hidden sm:flex justify-end pb-2 text-left">
-            <div className="max-w-64">
-              <AuthPanel />
-            </div>
-          </div>
           <p>
             score <span className="bg-[#c0ed00] text-lime-950 px-1">{score}</span> ({activeCount} to go)
           </p>
@@ -389,7 +379,12 @@ export default function Home() {
         <Grapes grapes={grapes} onToggle={toggleGrape} onMove={moveGrape} onMerge={mergeGrapes} pops={pops} />
       )}
 
-      <footer className="absolute bottom-0 left-0 w-full p-4 sm:p-8 z-0 space-y-1 sm:space-y-1.5 pointer-events-none">
+      {/* Above grapes (z-10) so the sign-in button stays clickable; the text itself lets clicks through. */}
+      <footer className="absolute bottom-0 left-0 w-full p-4 sm:p-8 z-10 space-y-1 sm:space-y-1.5 pointer-events-none">
+        {/* Sign-in sits just above the credits. Hidden until Supabase is configured. */}
+        <div className="w-fit max-w-64 mb-3 sm:mb-4 pointer-events-auto">
+          <AuthPanel />
+        </div>
         <p className="text-xs sm:text-sm text-zinc-900">© 2026. merge-todos. All rights reserved.</p>
         <p className="text-xs sm:text-sm text-zinc-900">Inquiries <span style={{ fontFamily: "sans-serif" }}>☞</span> ajangeunajang@gmail.com</p>
         <p className="text-xs sm:text-sm text-zinc-900">

@@ -16,7 +16,7 @@ export default function AuthPanel() {
     return (
       <button
         onClick={signInWithGoogle}
-        className="flex h-8 sm:h-9 items-center justify-center border border-ink px-3 text-xs sm:text-sm text-ink hover:bg-ink/5 transition-colors"
+        className="flex h-8 sm:h-9 items-center justify-center border border-line px-3 text-xs sm:text-sm text-ink hover:bg-ink/5 transition-colors"
       >
         Sign in with Google
         <GoogleLogo className="ml-1.5 size-3 sm:size-3.5" />
@@ -27,7 +27,7 @@ export default function AuthPanel() {
   const name = (user.user_metadata.full_name as string | undefined) ?? user.email;
 
   return (
-    <div className="flex min-h-8 sm:min-h-9 items-center justify-between gap-3 border border-ink px-3 py-2 text-xs sm:text-sm">
+    <div className="flex min-h-8 sm:min-h-9 items-center justify-between gap-3 border border-line px-3 py-2 text-xs sm:text-sm">
       <div className="flex min-w-0 flex-col leading-tight">
         <span className="truncate font-semibold">{name}</span>
         {name !== user.email && <span className="truncate text-[10px] sm:text-xs text-zinc-500">{user.email}</span>}

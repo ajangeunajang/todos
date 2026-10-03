@@ -341,7 +341,7 @@ export default function Home() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && addTodo()}
             placeholder="add a task..."
-            className="flex-1 bg-transparent text-ink placeholder-ink py-1.5 sm:py-2 text-xs sm:text-sm outline-none border-b border-ink transition"
+            className="flex-1 bg-transparent text-ink placeholder-ink py-1.5 sm:py-2 text-xs sm:text-sm outline-none border-b border-line transition"
           />
           <button
             onClick={addTodo}
@@ -364,11 +364,11 @@ export default function Home() {
           </p>
           <p className="flex gap-3 justify-end">
             {score > 0 && (
-              <button onClick={handleShare} className="border-b border-ink hover:opacity-50 transition">
+              <button onClick={handleShare} className="border-b border-line hover:opacity-50 transition">
                 {readyShare?.key === shareKey ? "tap to share" : "share"}
               </button>
             )}
-            <button onClick={reset} className="border-b border-ink hover:opacity-50 transition">
+            <button onClick={reset} className="border-b border-line hover:opacity-50 transition">
               reset
             </button>
           </p>
@@ -389,7 +389,7 @@ export default function Home() {
         <p className="text-xs sm:text-sm text-ink">Inquiries <span style={{ fontFamily: "sans-serif" }}>☞</span> ajangeunajang@gmail.com</p>
         <p className="text-xs sm:text-sm text-ink">
           Design and Developed by{" "}
-          <a href="https://www.ajangeunajang.com/" target="_blank" rel="noopener" className="no-underline pointer-events-auto" style={{ borderBottom: "1px dotted currentColor", paddingBottom: "2px" }}>
+          <a href="https://www.ajangeunajang.com/" target="_blank" rel="noopener" className="no-underline pointer-events-auto" style={{ borderBottom: "1px dotted var(--line)", paddingBottom: "2px" }}>
             Euna Jang
           </a>
         </p>

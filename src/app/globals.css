@@ -3,7 +3,7 @@
 :root {
   --background: #ededed;
   /* Dark grey used for all text and lines instead of black. */
-  --ink: #3f3f46;
+  --ink: #52525b;
   --foreground: var(--ink);
 }
 

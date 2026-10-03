@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import Grapes, { HEADER_H, grapeSize } from "@/components/Grapes";
-import { signInWithGoogle, signOut, useUser } from "@/lib/auth";
+import AuthPanel from "@/components/AuthPanel";
+import { useUser } from "@/lib/auth";
 import {
   DEFAULT_GRAPE_PREFIX,
   clearLocalBoard,
@@ -11,7 +12,6 @@ import {
   saveAccountBoard,
   writeLocalBoard,
 } from "@/lib/board";
-import { isSupabaseConfigured } from "@/lib/supabase";
 
 export interface Grape {
   id: string;
@@ -355,6 +355,10 @@ export default function Home() {
         {canMerge && (
           <p className="mt-3 sm:mt-4 text-xs text-zinc-900 opacity-50">drag a grape onto its twin.</p>
         )}
+        {/* Phones: below the input, where the header's right column has no room. */}
+        <div className="mt-3 sm:hidden">
+          <AuthPanel />
+        </div>
       </div>
 
       {(grapes.length > 0 || score > 0) && (
@@ -373,24 +377,11 @@ export default function Home() {
             </button>
           </p>
           {/* Hidden until Supabase is configured; signing in syncs the board across devices. */}
-          {isSupabaseConfigured && user !== undefined && (
-            <p className="flex gap-3 justify-end">
-              {user ? (
-                <>
-                  <span className="opacity-50 truncate max-w-[12rem]">
-                    {(user.user_metadata.full_name as string | undefined) ?? user.email}
-                  </span>
-                  <button onClick={signOut} className="border-b border-zinc-900 hover:opacity-50 transition">
-                    sign out
-                  </button>
-                </>
-              ) : (
-                <button onClick={signInWithGoogle} className="border-b border-zinc-900 hover:opacity-50 transition">
-                  sign in with google
-                </button>
-              )}
-            </p>
-          )}
+          <div className="hidden sm:flex justify-end pt-1 text-left">
+            <div className="max-w-64">
+              <AuthPanel />
+            </div>
+          </div>
         </div>
       )}
 

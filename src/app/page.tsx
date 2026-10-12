@@ -266,6 +266,11 @@ export default function Home() {
     });
   };
 
+  // Only unfinished todos are deleted (from the long-press box), so the score is untouched.
+  const deleteGrape = (id: string) => {
+    setGrapes((prev) => prev.filter((g) => g.id !== id || g.done));
+  };
+
   // An unfinished clustered todo brings the rest of its cluster along by the same offset.
   const moveGrape = (id: string, x: number, y: number) => {
     setGrapes((prev) => {
@@ -433,7 +438,7 @@ export default function Home() {
       )}
 
       {boardReady && (
-        <Grapes grapes={grapes} onToggle={toggleGrape} onSplit={splitGrape} onMove={moveGrape} onMerge={mergeGrapes} pops={pops} />
+        <Grapes grapes={grapes} onToggle={toggleGrape} onSplit={splitGrape} onDelete={deleteGrape} onMove={moveGrape} onMerge={mergeGrapes} pops={pops} />
       )}
 
       {/* Above grapes (z-10) so the sign-in button stays clickable; the text itself lets clicks through. */}

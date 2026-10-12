@@ -12,11 +12,12 @@ interface Props {
   y: number;
   vw: number;
   onSubmit: (first: string, second: string) => void;
+  onDelete: () => void;
   onCancel: () => void;
 }
 
-/** Long-press editor for a todo: edit its text and, optionally, split off a second todo. */
-export default function SplitEditor({ text, x, y, vw, onSubmit, onCancel }: Props) {
+/** Long-press editor for a todo: edit its text, split off a second todo, or delete it. */
+export default function SplitEditor({ text, x, y, vw, onSubmit, onDelete, onCancel }: Props) {
   const [first, setFirst] = useState(text);
   const [second, setSecond] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
@@ -70,10 +71,21 @@ export default function SplitEditor({ text, x, y, vw, onSubmit, onCancel }: Prop
         placeholder="second task..."
         className={inputClass}
       />
-      <p className="flex justify-between text-[10px] sm:text-xs opacity-50">
-        <span>{second.trim() ? "enter to split" : "enter to rename"}</span>
-        <span>esc</span>
-      </p>
+      <div className="flex items-baseline justify-between text-[10px] sm:text-xs">
+        <span className="opacity-50">{second.trim() ? "enter to split" : "enter to rename"}</span>
+        <span className="flex gap-3">
+          <button
+            type="button"
+            // Keep focus in the inputs (Safari doesn't focus buttons), so the form's blur doesn't cancel first.
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={onDelete}
+            className="border-b border-ink hover:opacity-50 transition"
+          >
+            delete
+          </button>
+          <span className="opacity-50">esc</span>
+        </span>
+      </div>
     </form>
   );
 }

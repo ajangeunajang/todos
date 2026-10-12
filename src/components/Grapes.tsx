@@ -49,6 +49,7 @@ interface Props {
   grapes: Grape[];
   onToggle: (id: string) => void;
   onSplit: (id: string, first: string, second: string) => void;
+  onDelete: (id: string) => void;
   onMove: (id: string, x: number, y: number) => void;
   onMerge: (dragId: string, targetId: string) => void;
   pops: ScorePop[];
@@ -64,7 +65,7 @@ interface DragInfo {
   moved: boolean;
 }
 
-export default function Grapes({ grapes, onToggle, onSplit, onMove, onMerge, pops }: Props) {
+export default function Grapes({ grapes, onToggle, onSplit, onDelete, onMove, onMerge, pops }: Props) {
   const [view, setView] = useState({ vw: 0, vh: 0 });
   const [drag, setDrag] = useState<{ id: string; x: number; y: number } | null>(null);
   const [target, setTarget] = useState<string | null>(null);
@@ -394,6 +395,10 @@ export default function Grapes({ grapes, onToggle, onSplit, onMove, onMerge, pop
             vw={vw}
             onSubmit={(first, second) => {
               onSplit(g.id, first, second);
+              setEditing(null);
+            }}
+            onDelete={() => {
+              onDelete(g.id);
               setEditing(null);
             }}
             onCancel={() => setEditing(null)}

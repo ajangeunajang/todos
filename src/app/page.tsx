@@ -266,9 +266,10 @@ export default function Home() {
     });
   };
 
-  // Only unfinished todos are deleted (from the long-press box), so the score is untouched.
+  // Deleting removes a grape from the board but never takes back points already earned:
+  // unfinished todos (long-press box) had none, merged grapes (their list) keep theirs.
   const deleteGrape = (id: string) => {
-    setGrapes((prev) => prev.filter((g) => g.id !== id || g.done));
+    setGrapes((prev) => prev.filter((g) => g.id !== id));
   };
 
   // An unfinished clustered todo brings the rest of its cluster along by the same offset.

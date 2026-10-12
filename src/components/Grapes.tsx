@@ -9,7 +9,8 @@ export const HEADER_H = 200;
 const PAD = 16;
 // Room under the lowest grape for its count label.
 const LABEL_H = 24;
-const PEEK_MS = 3000;
+// Long enough to read the list and reach its delete button.
+const PEEK_MS = 5000;
 const MAGNET_MAX = 180;
 // Holding a todo still this long opens the edit/split box instead of toggling it.
 const LONG_PRESS_MS = 500;
@@ -93,14 +94,35 @@ export default function Grapes({ grapes, onToggle, onSplit, onDelete, onMove, on
     [],
   );
 
+  // Merged grape whose delete button was pressed once and now asks "sure?".
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+  const closePeek = () => {
+    setPeek(null);
+    setConfirmDelete(null);
+  };
+
   const togglePeek = (id: string) => {
     clearTimeout(peekTimer.current);
+    setConfirmDelete(null);
     if (peek === id) {
       setPeek(null);
       return;
     }
     setPeek(id);
-    peekTimer.current = setTimeout(() => setPeek(null), PEEK_MS);
+    peekTimer.current = setTimeout(closePeek, PEEK_MS);
+  };
+
+  // First press asks to confirm (and keeps the list open a while longer); the second deletes.
+  const pressDelete = (id: string) => {
+    clearTimeout(peekTimer.current);
+    if (confirmDelete === id) {
+      closePeek();
+      onDelete(id);
+      return;
+    }
+    setConfirmDelete(id);
+    peekTimer.current = setTimeout(closePeek, PEEK_MS);
   };
 
   useEffect(() => {
@@ -367,6 +389,14 @@ export default function Grapes({ grapes, onToggle, onSplit, onDelete, onMove, on
                         </li>
                       ))}
                       {g.tasks.length > PEEK_MAX && <li className="opacity-50">+{g.tasks.length - PEEK_MAX} more</li>}
+                      <li className="pt-1">
+                        <button
+                          onClick={() => pressDelete(g.id)}
+                          className="pointer-events-auto border-b border-ink hover:opacity-50 transition"
+                        >
+                          {confirmDelete === g.id ? "sure?" : "delete"}
+                        </button>
+                      </li>
                     </ul>
                   )}
                   <span

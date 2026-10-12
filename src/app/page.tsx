@@ -308,8 +308,6 @@ export default function Home() {
   const taskCount = grapes.reduce((n, g) => n + g.tasks.length, 0);
   const boardValue = grapes.reduce((v, g) => v + (g.done ? grapeValue(g.tasks.length) : 0), 0);
   const maxScore = score + fullBoardValue(taskCount) - boardValue;
-  const levels = grapes.filter((g) => g.done).map((g) => g.level);
-  const canMerge = levels.some((l, i) => levels.indexOf(l) !== i);
 
   const shareText = `${score}/${maxScore}. i did it.`;
   const shareUrl = "https://merge-todos.vercel.app";
@@ -414,9 +412,6 @@ export default function Home() {
           </button>
         </div>
 
-        {canMerge && (
-          <p className="mt-3 sm:mt-4 text-xs text-ink opacity-50">drag a grape onto its twin.</p>
-        )}
       </div>
 
       {(grapes.length > 0 || score > 0) && (

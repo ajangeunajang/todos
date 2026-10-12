@@ -21,6 +21,8 @@ export interface Grape {
   // Center position as a fraction of the viewport (0–1).
   x: number;
   y: number;
+  // Todos split from the same one share a cluster and are dragged together while unfinished.
+  cluster?: string;
 }
 
 export interface ScorePop {
@@ -226,16 +228,25 @@ export default function Home() {
       const maxX = (vw - 16 - r) / vw;
       // Keep the pair centred on the original, nudged inward so neither half is clamped onto the other.
       const left = Math.min(Math.max(g.x - gap / 2, minX), maxX - gap);
+      const cluster = g.cluster ?? newId();
       return [
         ...prev.filter((p) => p.id !== id),
-        { ...g, tasks: [first], x: left },
-        { id: newId(), level: 1, done: false, tasks: [second], x: left + gap, y: g.y },
+        { ...g, tasks: [first], x: left, cluster },
+        { id: newId(), level: 1, done: false, tasks: [second], x: left + gap, y: g.y, cluster },
       ];
     });
   };
 
+  // An unfinished clustered todo brings the rest of its cluster along by the same offset.
   const moveGrape = (id: string, x: number, y: number) => {
-    setGrapes((prev) => prev.map((g) => (g.id === id ? { ...g, x, y } : g)));
+    setGrapes((prev) => {
+      const moved = prev.find((g) => g.id === id);
+      if (!moved) return prev;
+      const dx = x - moved.x;
+      const dy = y - moved.y;
+      const follows = (g: Grape) => !moved.done && !!moved.cluster && g.cluster === moved.cluster;
+      return prev.map((g) => (g.id === id ? { ...g, x, y } : follows(g) ? { ...g, x: g.x + dx, y: g.y + dy } : g));
+    });
   };
 
   const mergeGrapes = (dragId: string, targetId: string) => {

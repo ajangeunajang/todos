@@ -226,12 +226,29 @@ export default function Grapes({ grapes, onToggle, onSplit, onMove, onMerge, pop
     setTarget(null);
   };
 
+  // While an unfinished clustered todo is dragged, the rest of its cluster moves with it.
+  const dragged = drag ? grapes.find((g) => g.id === drag.id) : undefined;
+  const dragShift =
+    drag && dragged && !dragged.done && dragged.cluster
+      ? (() => {
+          const o = center(dragged, grapeSize(dragged.level, vw, vh), vw, vh);
+          return { cluster: dragged.cluster, dx: drag.x - o.x, dy: drag.y - o.y };
+        })()
+      : null;
+
   return (
     <>
       {grapes.map((g) => {
         const size = grapeSize(g.level, vw, vh);
-        const isDragging = drag?.id === g.id;
-        const c = isDragging ? { x: drag.x, y: drag.y } : center(g, size, vw, vh);
+        const isFollowing = !!dragShift && g.id !== drag?.id && g.cluster === dragShift.cluster;
+        const isDragging = drag?.id === g.id || isFollowing;
+        const home = center(g, size, vw, vh);
+        const c =
+          drag?.id === g.id
+            ? { x: drag.x, y: drag.y }
+            : isFollowing
+              ? { x: home.x + dragShift.dx, y: home.y + dragShift.dy }
+              : home;
         const isTarget = target === g.id;
         const isPhoto = g.done && g.level >= 2;
         const isPeeking = isPhoto && peek === g.id;

@@ -13,6 +13,9 @@ const PEEK_MS = 3000;
 // The long-press list (with delete) stays a little longer, to give time to reach the button.
 const PEEK_DELETE_MS = 5000;
 const MAGNET_MAX = 180;
+// Releasing faster than this (px/ms) throws the grape off screen, deleting it.
+const FLING_SPEED = 1.2;
+const FLING_MS = 450;
 // Holding a todo still this long opens the edit/split box instead of toggling it.
 const LONG_PRESS_MS = 500;
 const PEEK_MAX = 8;
@@ -65,11 +68,21 @@ interface DragInfo {
   offX: number;
   offY: number;
   moved: boolean;
+  // Recent pointer positions, for the release velocity that decides a fling.
+  samples: { x: number; y: number; t: number }[];
 }
 
 export default function Grapes({ grapes, onToggle, onSplit, onDelete, onMove, onMerge, pops }: Props) {
   const [view, setView] = useState({ vw: 0, vh: 0 });
   const [drag, setDrag] = useState<{ id: string; x: number; y: number } | null>(null);
+  // A thrown grape flying off screen: drawn at `from`, then eased to `to` once `launched`.
+  const [flying, setFlying] = useState<{
+    id: string;
+    from: { x: number; y: number };
+    to: { x: number; y: number };
+    spin: number;
+    launched: boolean;
+  } | null>(null);
   const [target, setTarget] = useState<string | null>(null);
   const dragRef = useRef<DragInfo | null>(null);
   const magnetRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -211,6 +224,7 @@ export default function Grapes({ grapes, onToggle, onSplit, onDelete, onMove, on
       offX: e.clientX - c.x,
       offY: e.clientY - c.y,
       moved: false,
+      samples: [{ x: e.clientX, y: e.clientY, t: e.timeStamp }],
     };
     // Long press: unfinished todos open the edit box, merged grapes their list with delete.
     if ((g.level === 1 && !g.done) || g.level >= 2) {
@@ -235,6 +249,8 @@ export default function Grapes({ grapes, onToggle, onSplit, onDelete, onMove, on
     if (!d.moved && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < 6) return;
     if (!d.moved) endPress();
     d.moved = true;
+    d.samples.push({ x: e.clientX, y: e.clientY, t: e.timeStamp });
+    if (d.samples.length > 6) d.samples.shift();
     const x = e.clientX - d.offX;
     const y = e.clientY - d.offY;
     setDrag({ id: g.id, x, y });
@@ -253,11 +269,32 @@ export default function Grapes({ grapes, onToggle, onSplit, onDelete, onMove, on
       const x = e.clientX - d.offX;
       const y = e.clientY - d.offY;
       const t = findTarget(g, x, y);
+      // Velocity over the last ~100ms of the drag.
+      const recent = d.samples.filter((p) => e.timeStamp - p.t < 100);
+      const first = recent[0] ?? d.samples[0];
+      const dt = Math.max(e.timeStamp - first.t, 1);
+      const vx = (e.clientX - first.x) / dt;
+      const vy = (e.clientY - first.y) / dt;
       if (t) onMerge(g.id, t);
+      else if (Math.hypot(vx, vy) > FLING_SPEED) fling(g, { x, y }, vx, vy);
       else onMove(g.id, x / vw, y / vh);
     }
     setDrag(null);
     setTarget(null);
+  };
+
+  // Send the grape along its release direction until it's well past the screen edge, then delete it.
+  const fling = (g: Grape, from: { x: number; y: number }, vx: number, vy: number) => {
+    const speed = Math.hypot(vx, vy);
+    const reach = Math.hypot(vw, vh) + grapeSize(g.level, vw, vh);
+    const to = { x: from.x + (vx / speed) * reach, y: from.y + (vy / speed) * reach };
+    setFlying({ id: g.id, from, to, spin: (vx >= 0 ? 1 : -1) * 240, launched: false });
+    // Next tick: the grape is first drawn where it was let go, then eased off screen.
+    setTimeout(() => setFlying((f) => (f && f.id === g.id ? { ...f, launched: true } : f)), 20);
+    setTimeout(() => {
+      setFlying((f) => (f?.id === g.id ? null : f));
+      onDelete(g.id);
+    }, FLING_MS);
   };
 
   const handlePointerCancel = () => {
@@ -285,8 +322,12 @@ export default function Grapes({ grapes, onToggle, onSplit, onDelete, onMove, on
         const isHeld = drag?.id === g.id;
         const isDragging = isHeld || isFollowing;
         const home = center(g, size, vw, vh);
-        const c =
-          drag?.id === g.id
+        const isFlying = flying?.id === g.id;
+        const c = isFlying
+          ? flying.launched
+            ? flying.to
+            : flying.from
+          : drag?.id === g.id
             ? { x: drag.x, y: drag.y }
             : isFollowing
               ? { x: home.x + dragShift.dx, y: home.y + dragShift.dy }
@@ -314,9 +355,15 @@ export default function Grapes({ grapes, onToggle, onSplit, onDelete, onMove, on
               top: c.y - size / 2,
               width: size,
               height: size,
-              zIndex: isDragging ? 15 : isPeeking ? 14 : g.done ? 2 : 1,
+              zIndex: isDragging || isFlying ? 15 : isPeeking ? 14 : g.done ? 2 : 1,
+              opacity: isFlying && flying.launched ? 0.2 : 1,
+              rotate: isFlying && flying.launched ? `${flying.spin}deg` : undefined,
               mixBlendMode: "multiply",
-              transition: isHeld
+              transition: isFlying
+                ? flying.launched
+                  ? `left ${FLING_MS}ms cubic-bezier(0.2, 0.6, 0.4, 1), top ${FLING_MS}ms cubic-bezier(0.2, 0.6, 0.4, 1), opacity ${FLING_MS}ms ease-in, rotate ${FLING_MS}ms ease-out`
+                  : "none"
+                : isHeld
                 ? "none"
                 : isFollowing
                   ? `left ${lag}s cubic-bezier(0.22, 1, 0.36, 1), top ${lag}s cubic-bezier(0.22, 1, 0.36, 1)`

@@ -40,6 +40,9 @@ const BUNCH_SPACING_MAX = 0.92;
 // Each placement direction is nudged by up to this many degrees either way.
 const BUNCH_JITTER_DEG = 12;
 
+// How long the "deleted · undo" notice stays up.
+const UNDO_MS = 4000;
+
 // Account saves are batched: dragging changes positions many times a second.
 const SAVE_DELAY_MS = 800;
 
@@ -96,6 +99,9 @@ export default function Home() {
   const [grapes, setGrapes] = useState<Grape[]>([]);
   const [score, setScore] = useState(0);
   const [pops, setPops] = useState<ScorePop[]>([]);
+  // Last deleted grape, offered back for a few seconds via the "deleted · undo" notice.
+  const [deleted, setDeleted] = useState<Grape | null>(null);
+  const deletedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   // A captured share image waiting for a second tap (see shareImage), keyed to the board it shows.
   const [readyShare, setReadyShare] = useState<{ file: File; key: string } | null>(null);
   const [input, setInput] = useState("");
@@ -269,7 +275,20 @@ export default function Home() {
   // Deleting removes a grape from the board but never takes back points already earned:
   // unfinished todos (long-press box) had none, merged grapes (their list) keep theirs.
   const deleteGrape = (id: string) => {
+    const g = grapes.find((g) => g.id === id);
+    if (!g) return;
     setGrapes((prev) => prev.filter((g) => g.id !== id));
+    clearTimeout(deletedTimer.current);
+    setDeleted(g);
+    deletedTimer.current = setTimeout(() => setDeleted(null), UNDO_MS);
+  };
+
+  const undoDelete = () => {
+    if (!deleted) return;
+    const g = deleted;
+    clearTimeout(deletedTimer.current);
+    setDeleted(null);
+    setGrapes((prev) => (prev.some((p) => p.id === g.id) ? prev : [...prev, g]));
   };
 
   // An unfinished clustered todo brings the rest of its cluster along by the same offset.
@@ -440,6 +459,19 @@ export default function Home() {
 
       {boardReady && (
         <Grapes grapes={grapes} onToggle={toggleGrape} onSplit={splitGrape} onDelete={deleteGrape} onMove={moveGrape} onMerge={mergeGrapes} pops={pops} />
+      )}
+
+      {deleted && (
+        <div
+          key={deleted.id}
+          className="absolute bottom-0 right-0 z-20 p-4 sm:p-8 text-xs sm:text-sm text-ink"
+          style={{ animation: "fadeIn 0.2s ease-out" }}
+        >
+          deleted ·{" "}
+          <button onClick={undoDelete} className="border-b border-dotted border-ink pb-px hover:opacity-50 transition">
+            undo
+          </button>
+        </div>
       )}
 
       {/* Above grapes (z-10) so the sign-in button stays clickable; the text itself lets clicks through. */}

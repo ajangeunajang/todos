@@ -212,6 +212,27 @@ export default function Home() {
     setGrapes((prev) => prev.map((g) => (g.id === id ? { ...g, done: !g.done } : g)));
   };
 
+  // Long-press edit: rename the todo, and if a second text is given, split it into two side by side.
+  const splitGrape = (id: string, first: string, second: string) => {
+    setGrapes((prev) => {
+      const g = prev.find((g) => g.id === id);
+      if (!g || g.done || g.level !== 1) return prev;
+      if (!second) return prev.map((p) => (p.id === id ? { ...p, tasks: [first] } : p));
+      const vw = window.innerWidth;
+      const r = grapeSize(1, vw, window.innerHeight) / 2;
+      const gap = (2 * r + 12) / vw;
+      const minX = (16 + r) / vw;
+      const maxX = (vw - 16 - r) / vw;
+      // Keep the pair centred on the original, nudged inward so neither half is clamped onto the other.
+      const left = Math.min(Math.max(g.x - gap / 2, minX), maxX - gap);
+      return [
+        ...prev.filter((p) => p.id !== id),
+        { ...g, tasks: [first], x: left },
+        { id: newId(), level: 1, done: false, tasks: [second], x: left + gap, y: g.y },
+      ];
+    });
+  };
+
   const moveGrape = (id: string, x: number, y: number) => {
     setGrapes((prev) => prev.map((g) => (g.id === id ? { ...g, x, y } : g)));
   };
@@ -376,7 +397,7 @@ export default function Home() {
       )}
 
       {boardReady && (
-        <Grapes grapes={grapes} onToggle={toggleGrape} onMove={moveGrape} onMerge={mergeGrapes} pops={pops} />
+        <Grapes grapes={grapes} onToggle={toggleGrape} onSplit={splitGrape} onMove={moveGrape} onMerge={mergeGrapes} pops={pops} />
       )}
 
       {/* Above grapes (z-10) so the sign-in button stays clickable; the text itself lets clicks through. */}

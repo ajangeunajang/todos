@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import SplitEditor from "@/components/SplitEditor";
 import type { Grape, ScorePop } from "@/app/page";
 
 export const HEADER_H = 200;
@@ -10,6 +11,8 @@ const PAD = 16;
 const LABEL_H = 24;
 const PEEK_MS = 3000;
 const MAGNET_MAX = 180;
+// Holding a todo still this long opens the edit/split box instead of toggling it.
+const LONG_PRESS_MS = 500;
 const PEEK_MAX = 8;
 
 // Shine Muscat green (#c0ed00) for every completed grape; size alone shows the level.
@@ -45,6 +48,7 @@ function center(g: Pick<Grape, "x" | "y">, size: number, vw: number, vh: number)
 interface Props {
   grapes: Grape[];
   onToggle: (id: string) => void;
+  onSplit: (id: string, first: string, second: string) => void;
   onMove: (id: string, x: number, y: number) => void;
   onMerge: (dragId: string, targetId: string) => void;
   pops: ScorePop[];
@@ -60,7 +64,7 @@ interface DragInfo {
   moved: boolean;
 }
 
-export default function Grapes({ grapes, onToggle, onMove, onMerge, pops }: Props) {
+export default function Grapes({ grapes, onToggle, onSplit, onMove, onMerge, pops }: Props) {
   const [view, setView] = useState({ vw: 0, vh: 0 });
   const [drag, setDrag] = useState<{ id: string; x: number; y: number } | null>(null);
   const [target, setTarget] = useState<string | null>(null);
@@ -70,7 +74,23 @@ export default function Grapes({ grapes, onToggle, onMove, onMerge, pops }: Prop
   const [peek, setPeek] = useState<string | null>(null);
   const peekTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  useEffect(() => () => clearTimeout(peekTimer.current), []);
+  // Long press on an unfinished todo: `pressing` shrinks it while held, `editing` shows the box.
+  const [pressing, setPressing] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
+  const pressTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const endPress = () => {
+    clearTimeout(pressTimer.current);
+    setPressing(null);
+  };
+
+  useEffect(
+    () => () => {
+      clearTimeout(peekTimer.current);
+      clearTimeout(pressTimer.current);
+    },
+    [],
+  );
 
   const togglePeek = (id: string) => {
     clearTimeout(peekTimer.current);
@@ -138,6 +158,9 @@ export default function Grapes({ grapes, onToggle, onMove, onMerge, pops }: Prop
 
   const handlePointerDown = (e: React.PointerEvent, g: Grape) => {
     if (dragRef.current) return;
+    // No compatibility mouse events after the touch: their mousedown would steal focus from
+    // the edit box a long press opens.
+    e.preventDefault();
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {}
@@ -153,12 +176,23 @@ export default function Grapes({ grapes, onToggle, onMove, onMerge, pops }: Prop
       offY: e.clientY - c.y,
       moved: false,
     };
+    if (g.level === 1 && !g.done) {
+      setPressing(g.id);
+      pressTimer.current = setTimeout(() => {
+        // Swallow the rest of this press so letting go doesn't also toggle it.
+        dragRef.current = null;
+        setPressing(null);
+        setPeek(null);
+        setEditing(g.id);
+      }, LONG_PRESS_MS);
+    }
   };
 
   const handlePointerMove = (e: React.PointerEvent, g: Grape) => {
     const d = dragRef.current;
     if (!d || d.id !== g.id || d.pointerId !== e.pointerId) return;
     if (!d.moved && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < 6) return;
+    if (!d.moved) endPress();
     d.moved = true;
     const x = e.clientX - d.offX;
     const y = e.clientY - d.offY;
@@ -167,6 +201,7 @@ export default function Grapes({ grapes, onToggle, onMove, onMerge, pops }: Prop
   };
 
   const handlePointerUp = (e: React.PointerEvent, g: Grape) => {
+    endPress();
     const d = dragRef.current;
     if (!d || d.id !== g.id || d.pointerId !== e.pointerId) return;
     dragRef.current = null;
@@ -185,6 +220,7 @@ export default function Grapes({ grapes, onToggle, onMove, onMerge, pops }: Prop
   };
 
   const handlePointerCancel = () => {
+    endPress();
     dragRef.current = null;
     setDrag(null);
     setTarget(null);
@@ -234,15 +270,28 @@ export default function Grapes({ grapes, onToggle, onMove, onMerge, pops }: Prop
                 onPointerMove={(e) => handlePointerMove(e, g)}
                 onPointerUp={(e) => handlePointerUp(e, g)}
                 onPointerCancel={handlePointerCancel}
+                // Long press is ours: no text-selection or context menu on phones.
+                onContextMenu={(e) => e.preventDefault()}
                 title={g.tasks.join("\n")}
                 className={`relative w-full h-full rounded-full flex items-center justify-center text-center p-3 select-none transition-colors ${
                   g.done ? "cursor-grab active:cursor-grabbing" : "bg-zinc-100 hover:bg-zinc-200"
                 }`}
                 style={{
                   touchAction: "none",
+                  WebkitTouchCallout: "none",
                   backgroundColor: g.done && !isPhoto ? GRAPE_COLOR : undefined,
-                  transform: isTarget ? "scale(1.12)" : isDragging ? "scale(1.05)" : "scale(1)",
-                  transition: "transform 0.2s ease, background-color 0.3s ease",
+                  transform: isTarget
+                    ? "scale(1.12)"
+                    : isDragging
+                      ? "scale(1.05)"
+                      : pressing === g.id
+                        ? "scale(0.9)"
+                        : "scale(1)",
+                  // While held, shrink over the long-press window so the hold reads as progress.
+                  transition:
+                    pressing === g.id
+                      ? `transform ${LONG_PRESS_MS}ms ease-out, background-color 0.3s ease`
+                      : "transform 0.2s ease, background-color 0.3s ease",
                   animation: "grapeIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)",
                 }}
               >
@@ -307,6 +356,25 @@ export default function Grapes({ grapes, onToggle, onMove, onMerge, pops }: Prop
           </div>
         );
       })}
+      {(() => {
+        const g = editing ? grapes.find((g) => g.id === editing && !g.done) : undefined;
+        if (!g) return null;
+        const c = center(g, grapeSize(g.level, vw, vh), vw, vh);
+        return (
+          <SplitEditor
+            key={g.id}
+            text={g.tasks[0]}
+            x={c.x}
+            y={c.y}
+            vw={vw}
+            onSubmit={(first, second) => {
+              onSplit(g.id, first, second);
+              setEditing(null);
+            }}
+            onCancel={() => setEditing(null)}
+          />
+        );
+      })()}
       {pops.map((p) => {
         const c = center(p, grapeSize(p.level, vw, vh), vw, vh);
         return (

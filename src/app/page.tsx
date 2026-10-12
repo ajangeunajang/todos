@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Grapes, { HEADER_H, grapeSize } from "@/components/Grapes";
+import Grapes, { HEADER_H, center, grapeSize } from "@/components/Grapes";
 import AuthPanel from "@/components/AuthPanel";
 import { useUser } from "@/lib/auth";
 import {
@@ -221,18 +221,39 @@ export default function Home() {
       if (!g || g.done || g.level !== 1) return prev;
       if (!second) return prev.map((p) => (p.id === id ? { ...p, tasks: [first] } : p));
       const vw = window.innerWidth;
-      const r = grapeSize(1, vw, window.innerHeight) / 2;
-      // Centres one diameter apart, so the two circles sit edge to edge like a split grape.
-      const gap = (2 * r) / vw;
-      const minX = (16 + r) / vw;
-      const maxX = (vw - 16 - r) / vw;
-      // Keep the pair centred on the original, nudged inward so neither half is clamped onto the other.
-      const left = Math.min(Math.max(g.x - gap / 2, minX), maxX - gap);
+      const vh = window.innerHeight;
+      const size = grapeSize(1, vw, vh);
+      const r = size / 2;
+      const origin = center(g, size, vw, vh);
+      // The new todo sits edge to edge with the original, on the first side with room:
+      // right, the diagonals, then left and straight up/down. Splitting again packs the
+      // pieces into a bunch rather than a row.
+      const onScreen = (x: number, y: number) => {
+        // Inside the play area iff clamping leaves it where it is.
+        const c = center({ x: x / vw, y: y / vh }, size, vw, vh);
+        return Math.abs(c.x - x) < 0.5 && Math.abs(c.y - y) < 0.5;
+      };
+      const fits = (x: number, y: number) =>
+        onScreen(x, y) &&
+        prev.every((o) => {
+          const os = grapeSize(o.level, vw, vh);
+          const oc = center(o, os, vw, vh);
+          return Math.hypot(oc.x - x, oc.y - y) >= r + os / 2 - 1;
+        });
+      let spot = { x: origin.x + 2 * r, y: origin.y };
+      for (const deg of [0, 60, -60, 120, -120, 180, 90, -90, 30, -30, 150, -150]) {
+        const a = (deg * Math.PI) / 180;
+        const x = origin.x + 2 * r * Math.cos(a);
+        const y = origin.y + 2 * r * Math.sin(a);
+        if (fits(x, y)) {
+          spot = { x, y };
+          break;
+        }
+      }
       const cluster = g.cluster ?? newId();
       return [
-        ...prev.filter((p) => p.id !== id),
-        { ...g, tasks: [first], x: left, cluster },
-        { id: newId(), level: 1, done: false, tasks: [second], x: left + gap, y: g.y, cluster },
+        ...prev.map((p) => (p.id === id ? { ...p, tasks: [first], cluster } : p)),
+        { id: newId(), level: 1, done: false, tasks: [second], x: spot.x / vw, y: spot.y / vh, cluster },
       ];
     });
   };

@@ -37,7 +37,7 @@ export function grapeSize(level: number, vw: number, vh: number) {
 }
 
 // Grapes store their center as a fraction of the viewport; clamp so they stay on screen.
-function center(g: Pick<Grape, "x" | "y">, size: number, vw: number, vh: number) {
+export function center(g: Pick<Grape, "x" | "y">, size: number, vw: number, vh: number) {
   const r = size / 2;
   return {
     x: Math.min(Math.max(g.x * vw, PAD + r), vw - PAD - r),
@@ -232,7 +232,7 @@ export default function Grapes({ grapes, onToggle, onSplit, onMove, onMerge, pop
     drag && dragged && !dragged.done && dragged.cluster
       ? (() => {
           const o = center(dragged, grapeSize(dragged.level, vw, vh), vw, vh);
-          return { cluster: dragged.cluster, dx: drag.x - o.x, dy: drag.y - o.y };
+          return { cluster: dragged.cluster, dx: drag.x - o.x, dy: drag.y - o.y, origin: o };
         })()
       : null;
 
@@ -241,7 +241,8 @@ export default function Grapes({ grapes, onToggle, onSplit, onMove, onMerge, pop
       {grapes.map((g) => {
         const size = grapeSize(g.level, vw, vh);
         const isFollowing = !!dragShift && g.id !== drag?.id && g.cluster === dragShift.cluster;
-        const isDragging = drag?.id === g.id || isFollowing;
+        const isHeld = drag?.id === g.id;
+        const isDragging = isHeld || isFollowing;
         const home = center(g, size, vw, vh);
         const c =
           drag?.id === g.id
@@ -249,6 +250,11 @@ export default function Grapes({ grapes, onToggle, onSplit, onMove, onMerge, pop
             : isFollowing
               ? { x: home.x + dragShift.dx, y: home.y + dragShift.dy }
               : home;
+        // Followers trail the held grape, farther ones lagging more, so the bunch is pulled
+        // along rather than sliding as one rigid piece.
+        const lag = isFollowing
+          ? Math.min(0.15 + (0.12 * Math.hypot(home.x - dragShift.origin.x, home.y - dragShift.origin.y)) / size, 0.6)
+          : 0;
         const isTarget = target === g.id;
         const isPhoto = g.done && g.level >= 2;
         const isPeeking = isPhoto && peek === g.id;
@@ -269,9 +275,11 @@ export default function Grapes({ grapes, onToggle, onSplit, onMove, onMerge, pop
               height: size,
               zIndex: isDragging ? 15 : isPeeking ? 14 : g.done ? 2 : 1,
               mixBlendMode: "multiply",
-              transition: isDragging
+              transition: isHeld
                 ? "none"
-                : "left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), top 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+                : isFollowing
+                  ? `left ${lag}s cubic-bezier(0.22, 1, 0.36, 1), top ${lag}s cubic-bezier(0.22, 1, 0.36, 1)`
+                  : "left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), top 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
             }}
           >
             <div

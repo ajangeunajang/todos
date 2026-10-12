@@ -33,6 +33,9 @@ export interface ScorePop {
   y: number;
 }
 
+// Split pieces sit this fraction of a diameter apart, overlapping a little like a grape bunch.
+const BUNCH_SPACING = 0.85;
+
 // Account saves are batched: dragging changes positions many times a second.
 const SAVE_DELAY_MS = 800;
 
@@ -225,7 +228,7 @@ export default function Home() {
       const size = grapeSize(1, vw, vh);
       const r = size / 2;
       const origin = center(g, size, vw, vh);
-      // The new todo sits edge to edge with the original, on the first side with room:
+      // The new todo overlaps the original slightly, on the first side with room:
       // right, the diagonals, then left and straight up/down. Splitting again packs the
       // pieces into a bunch rather than a row.
       const onScreen = (x: number, y: number) => {
@@ -238,13 +241,14 @@ export default function Home() {
         prev.every((o) => {
           const os = grapeSize(o.level, vw, vh);
           const oc = center(o, os, vw, vh);
-          return Math.hypot(oc.x - x, oc.y - y) >= r + os / 2 - 1;
+          return Math.hypot(oc.x - x, oc.y - y) >= (r + os / 2) * BUNCH_SPACING - 1;
         });
-      let spot = { x: origin.x + 2 * r, y: origin.y };
+      const step = 2 * r * BUNCH_SPACING;
+      let spot = { x: origin.x + step, y: origin.y };
       for (const deg of [0, 60, -60, 120, -120, 180, 90, -90, 30, -30, 150, -150]) {
         const a = (deg * Math.PI) / 180;
-        const x = origin.x + 2 * r * Math.cos(a);
-        const y = origin.y + 2 * r * Math.sin(a);
+        const x = origin.x + step * Math.cos(a);
+        const y = origin.y + step * Math.sin(a);
         if (fits(x, y)) {
           spot = { x, y };
           break;

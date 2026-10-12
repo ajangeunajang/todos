@@ -33,8 +33,12 @@ export interface ScorePop {
   y: number;
 }
 
-// Split pieces sit this fraction of a diameter apart, overlapping a little like a grape bunch.
-const BUNCH_SPACING = 0.85;
+// Split pieces sit 0.78–0.92 of a diameter apart (picked per split), overlapping a little
+// and unevenly like a grape bunch.
+const BUNCH_SPACING_MIN = 0.78;
+const BUNCH_SPACING_MAX = 0.92;
+// Each placement direction is nudged by up to this many degrees either way.
+const BUNCH_JITTER_DEG = 12;
 
 // Account saves are batched: dragging changes positions many times a second.
 const SAVE_DELAY_MS = 800;
@@ -241,12 +245,12 @@ export default function Home() {
         prev.every((o) => {
           const os = grapeSize(o.level, vw, vh);
           const oc = center(o, os, vw, vh);
-          return Math.hypot(oc.x - x, oc.y - y) >= (r + os / 2) * BUNCH_SPACING - 1;
+          return Math.hypot(oc.x - x, oc.y - y) >= (r + os / 2) * BUNCH_SPACING_MIN - 1;
         });
-      const step = 2 * r * BUNCH_SPACING;
+      const step = 2 * r * (BUNCH_SPACING_MIN + Math.random() * (BUNCH_SPACING_MAX - BUNCH_SPACING_MIN));
       let spot = { x: origin.x + step, y: origin.y };
       for (const deg of [0, 60, -60, 120, -120, 180, 90, -90, 30, -30, 150, -150]) {
-        const a = (deg * Math.PI) / 180;
+        const a = ((deg + (Math.random() * 2 - 1) * BUNCH_JITTER_DEG) * Math.PI) / 180;
         const x = origin.x + step * Math.cos(a);
         const y = origin.y + step * Math.sin(a);
         if (fits(x, y)) {

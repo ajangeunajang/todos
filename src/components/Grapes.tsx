@@ -394,7 +394,7 @@ export default function Grapes({ grapes, onToggle, onSplit, onDelete, onMove, on
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <button
                     onClick={() => pressDelete(g.id)}
-                    className="pointer-events-auto border border-ink bg-[#ededed] px-2 py-0.5 text-xs sm:text-sm text-ink hover:bg-ink hover:text-[#ededed] transition-colors"
+                    className="pointer-events-auto border-b border-dotted border-ink pb-px text-xs sm:text-sm text-ink hover:opacity-50 transition"
                     style={{ animation: "peekIn 0.2s ease-out" }}
                   >
                     {confirmDelete === g.id ? "sure?" : "delete"}

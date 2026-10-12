@@ -392,7 +392,7 @@ export default function Home() {
         <p className="text-xs sm:text-sm text-ink mb-1 min-h-[1lh]">
           {time}
         </p>
-        <h1 className="text-xs sm:text-sm text-ink mb-4 sm:mb-6">today&apos;s todos</h1>
+        <h1 className="text-xs sm:text-sm text-ink mb-4 sm:mb-6">today&apos;s todos (finish and merge)</h1>
 
         <div className="flex gap-2 items-end">
           <input

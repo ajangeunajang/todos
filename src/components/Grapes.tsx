@@ -389,6 +389,18 @@ export default function Grapes({ grapes, onToggle, onSplit, onDelete, onMove, on
                   </span>
                 )}
               </button>
+              {/* Long press on a merged grape: delete sits right on the grape. */}
+              {isPeeking && peekDelete && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <button
+                    onClick={() => pressDelete(g.id)}
+                    className="pointer-events-auto border border-ink bg-[#ededed] px-2 py-0.5 text-xs sm:text-sm text-ink hover:bg-ink hover:text-[#ededed] transition-colors"
+                    style={{ animation: "peekIn 0.2s ease-out" }}
+                  >
+                    {confirmDelete === g.id ? "sure?" : "delete"}
+                  </button>
+                </div>
+              )}
               {/* Outside the button so the label can hang below the grape (captures clip button overflow). */}
               {isPhoto && (
                 <div className="absolute left-1/2 top-full -translate-x-1/2 mt-1 flex flex-col items-center pointer-events-none">
@@ -407,16 +419,6 @@ export default function Grapes({ grapes, onToggle, onSplit, onDelete, onMove, on
                         </li>
                       ))}
                       {g.tasks.length > PEEK_MAX && <li className="opacity-50">+{g.tasks.length - PEEK_MAX} more</li>}
-                      {peekDelete && (
-                        <li className="pt-1">
-                          <button
-                            onClick={() => pressDelete(g.id)}
-                            className="pointer-events-auto border-b border-ink hover:opacity-50 transition"
-                          >
-                            {confirmDelete === g.id ? "sure?" : "delete"}
-                          </button>
-                        </li>
-                      )}
                     </ul>
                   )}
                   <span

@@ -220,7 +220,8 @@ export default function Home() {
       if (!second) return prev.map((p) => (p.id === id ? { ...p, tasks: [first] } : p));
       const vw = window.innerWidth;
       const r = grapeSize(1, vw, window.innerHeight) / 2;
-      const gap = (2 * r + 12) / vw;
+      // Centres one diameter apart, so the two circles sit edge to edge like a split grape.
+      const gap = (2 * r) / vw;
       const minX = (16 + r) / vw;
       const maxX = (vw - 16 - r) / vw;
       // Keep the pair centred on the original, nudged inward so neither half is clamped onto the other.

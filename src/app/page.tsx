@@ -462,15 +462,21 @@ export default function Home() {
       )}
 
       {deleted && (
-        <div
-          key={deleted.id}
-          className="absolute bottom-0 right-0 z-20 p-4 sm:p-8 text-xs sm:text-sm text-ink"
-          style={{ animation: "fadeIn 0.2s ease-out" }}
-        >
-          deleted ·{" "}
-          <button onClick={undoDelete} className="border-b border-dotted border-ink pb-px hover:opacity-50 transition">
-            undo
-          </button>
+        // Centred above the footer, on the key colour, so it's noticed right after a throw.
+        <div className="absolute inset-x-0 bottom-36 sm:bottom-40 z-20 flex justify-center pointer-events-none">
+          <div
+            key={deleted.id}
+            className="pointer-events-auto bg-[#c0ed00] px-2 py-1 text-xs sm:text-sm text-lime-950"
+            style={{ animation: "fadeIn 0.2s ease-out" }}
+          >
+            deleted ·{" "}
+            <button
+              onClick={undoDelete}
+              className="border-b border-dotted border-lime-950 pb-px hover:opacity-50 transition"
+            >
+              undo
+            </button>
+          </div>
         </div>
       )}
 
